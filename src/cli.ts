@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 import { exitWithResult, printSummaryReport, scanFiles } from "./index.ts";
 
 async function main() {
