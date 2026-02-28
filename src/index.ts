@@ -1,6 +1,20 @@
+import { RULES } from "./rules";
+export function exitWithResult(errorCount: number, warningCount: number): never {
+	const totalCount = errorCount + warningCount;
+	if (totalCount > 0) printSummaryReport(errorCount, warningCount);
+	if (errorCount > 0) {
+		console.log("\n🚫 Errors found! Fix before proceeding.");
+		process.exit(1);
+	} else if (warningCount > 0) {
+		console.log("\n⚠️ Warnings found. Consider fixing for better compliance.");
+		process.exit(0);
+	} else {
+		process.exit(0);
+	}
+}
 export async function scanFiles(
 	pattern: string,
-	excludePatterns: string[] = [
+	excludePatterns: readonly string[] = [
 		"node_modules/**",
 		"**/node_modules/**",
 		"dist/**",
@@ -17,9 +31,8 @@ export async function scanFiles(
 	],
 	excludeName: string = "rule-validator",
 ): Promise<ScanResult> {
-	let totalViolations = 0;
-	let errorCount = 0;
-	let warningCount = 0;
+	let errorCount: number = 0;
+	let warningCount: number = 0;
 	const { promises } = await import("node:fs");
 	const path = await import("node:path");
 	for await (const file of promises.glob(pattern, {
@@ -28,22 +41,21 @@ export async function scanFiles(
 		if (!shouldProcessFile(file, excludeName)) {
 			continue;
 		}
-		const violations = await scanFile(file);
+		const violations: Violation[] = await scanFile(file);
 		if (violations.length > 0) {
-			const relativePath = path.relative(process.cwd(), file);
+			const relativePath: string = path.relative(process.cwd(), file);
 			printViolations(relativePath, violations);
-			totalViolations += violations.length;
 			errorCount += countBySeverity(violations, "error");
 			warningCount += countBySeverity(violations, "warning");
 		}
 	}
-	return { totalViolations, errorCount, warningCount };
+	return { errorCount, warningCount };
 }
 export async function scanFile(filePath: string): Promise<Violation[]> {
 	const violations: Violation[] = [];
-	const content = await Bun.file(filePath).text();
-	const lines = content.split("\n");
-	for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+	const content: string = await Bun.file(filePath).text();
+	const lines: string[] = content.split("\n");
+	for (let lineIndex: number = 0; lineIndex < lines.length; lineIndex++) {
 		const line = lines[lineIndex];
 		if (!line) {
 			continue;
@@ -60,12 +72,12 @@ export async function scanFile(filePath: string): Promise<Violation[]> {
 export function checkLineForViolations(params: CheckLineParams): void {
 	const { line, lineIndex, filePath, violations } = params;
 	for (const rule of RULES) {
-		const matches = [...line.matchAll(rule.pattern)];
+		const matches: RegExpMatchArray[] = [...line.matchAll(rule.pattern)];
 		for (const match of matches) {
 			violations.push({
 				file: filePath,
 				line: lineIndex + 1,
-				column: match.index || 0,
+				column: match.index ?? 0,
 				rule,
 				match: match[0],
 			});
@@ -73,43 +85,28 @@ export function checkLineForViolations(params: CheckLineParams): void {
 	}
 }
 export function shouldProcessFile(file: string, excludeName?: string): boolean {
-	const isValidExtension =
+	const isValidExtension: boolean =
 		file.endsWith(".ts") || file.endsWith(".tsx") || file.endsWith(".js") || file.endsWith(".jsx");
-	const isNotSelf = excludeName ? !file.includes(excludeName) : true;
+	const isNotSelf: boolean = excludeName ? !file.includes(excludeName) : true;
 	return isValidExtension && isNotSelf;
 }
 export function countBySeverity(violations: Violation[], severity: "error" | "warning"): number {
 	return violations.filter((v) => v.rule.severity === severity).length;
 }
 export function printViolations(file: string, violations: Violation[]): void {
-	const relativePath = file; // Caller should provide relative path
+	const relativePath: string = file; // Caller should provide relative path
 	console.log(`📁 ${relativePath} :`);
 	for (const v of violations) {
-		const icon = v.rule.severity === "error" ? "❌" : "⚠️";
+		const icon: string = v.rule.severity === "error" ? "❌" : "⚠️";
 		console.log(`  ${icon} ${relativePath}:${v.line}:${v.column} - ${v.rule.message}`);
 		console.log(`    Found: ${v.match.trim()}`);
 	}
 	console.log("");
 }
-export function printSummaryReport(
-	totalViolations: number,
-	errorCount: number,
-	warningCount: number,
-): void {
+export function printSummaryReport(errorCount: number, warningCount: number): void {
 	console.log(
-		`📊 Summary: ${totalViolations} violations (${errorCount} errors, ${warningCount} warnings)`,
+		`📊 Summary: ${errorCount + warningCount} violations (${errorCount} errors, ${warningCount} warnings)`,
 	);
-}
-export function exitWithResult(errorCount: number, warningCount: number): never {
-	if (errorCount > 0) {
-		console.log("\n🚫 Errors found! Fix before proceeding.");
-		process.exit(1);
-	} else if (warningCount > 0) {
-		console.log("\n⚠️ Warnings found. Consider fixing for better compliance.");
-		process.exit(0);
-	} else {
-		process.exit(0);
-	}
 }
 // Rule Compliance Validator - Library
 // Scans code for violations of AGENTS.md rules
@@ -126,9 +123,6 @@ export interface Violation {
 	rule: Rule;
 	match: string;
 }
-export { RULES } from "./rules";
-
-import { RULES } from "./rules";
 export interface CheckLineParams {
 	line: string;
 	lineIndex: number;
@@ -136,10 +130,9 @@ export interface CheckLineParams {
 	violations: Violation[];
 }
 export interface ScanResult {
-	totalViolations: number;
 	errorCount: number;
 	warningCount: number;
 }
-
+export { RULES } from "./rules";
 export * from "./rules/index";
 export * from "./typescript/index";
