@@ -1,6 +1,6 @@
 import { RULES } from "./rules";
 export function exitWithResult(errorCount: number, warningCount: number): never {
-	const totalCount = errorCount + warningCount;
+	const totalCount: number = errorCount + warningCount;
 	if (totalCount > 0) printSummaryReport(errorCount, warningCount);
 	if (errorCount > 0) {
 		console.log("\n🚫 Errors found! Fix before proceeding.");
@@ -70,7 +70,7 @@ export async function scanFile(filePath: string): Promise<Violation[]> {
 	return violations;
 }
 export function checkLineForViolations(params: CheckLineParams): void {
-	const { line, lineIndex, filePath, violations } = params;
+	const { line, lineIndex, filePath, violations }: CheckLineParams = params;
 	for (const rule of RULES) {
 		const matches: RegExpMatchArray[] = [...line.matchAll(rule.pattern)];
 		for (const match of matches) {
@@ -91,7 +91,7 @@ export function shouldProcessFile(file: string, excludeName?: string): boolean {
 	return isValidExtension && isNotSelf;
 }
 export function countBySeverity(violations: Violation[], severity: "error" | "warning"): number {
-	return violations.filter((v) => v.rule.severity === severity).length;
+	return violations.filter((v: Violation) => v.rule.severity === severity).length;
 }
 export function printViolations(file: string, violations: Violation[]): void {
 	const relativePath: string = file; // Caller should provide relative path
