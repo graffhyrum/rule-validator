@@ -1,4 +1,13 @@
 import { RULES } from "./rules";
+
+export interface FileReader {
+	readFile(path: string): Promise<string>;
+}
+
+export const bunFileReader: FileReader = {
+	readFile: (path: string) => Bun.file(path).text(),
+};
+
 export function exitWithResult(errorCount: number, warningCount: number): never {
 	const totalCount: number = errorCount + warningCount;
 	if (totalCount > 0) printSummaryReport(errorCount, warningCount);
@@ -51,9 +60,12 @@ export async function scanFiles(
 	}
 	return { errorCount, warningCount };
 }
-export async function scanFile(filePath: string): Promise<Violation[]> {
+export async function scanFile(
+	filePath: string,
+	fileReader: FileReader = bunFileReader,
+): Promise<Violation[]> {
 	const violations: Violation[] = [];
-	const content: string = await Bun.file(filePath).text();
+	const content: string = await fileReader.readFile(filePath);
 	const lines: string[] = content.split("\n");
 	for (let lineIndex: number = 0; lineIndex < lines.length; lineIndex++) {
 		const line = lines[lineIndex];

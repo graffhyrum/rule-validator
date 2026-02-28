@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
 
 // Mock RULES module
 const mockRules = [
@@ -23,55 +23,19 @@ mock.module("./rules", () => ({
 import {
 	checkLineForViolations,
 	countBySeverity,
-	Rule,
 	scanFile,
 	shouldProcessFile,
 	type Violation,
 } from "./index";
 
-const mockBunFile = {
-	text: () => Promise.resolve("content"),
-	slice: () => mockBunFile,
-	writer: () => ({
-		start: () => {},
-		ref: () => {},
-		unref: () => {},
-		write: (data: any) => Promise.resolve(0),
-		end: () => Promise.resolve(0),
-		flush: () => Promise.resolve(0),
-	}),
-	write: () => mockBunFile.writer(),
-	unlink: () => Promise.resolve(),
-	delete: () => Promise.resolve(),
-	stat: () => Promise.resolve({}),
-	stream: () => new ReadableStream(),
-	lastModified: 0,
-	exists: () => Promise.resolve(true),
-	size: 0,
-	type: "",
-	name: "",
-	arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-	bytes: () => Promise.resolve(new Uint8Array(0)),
-	json: () => Promise.resolve(null),
-	formData: () => Promise.resolve(new FormData()),
-	blob: () => new Blob(),
-};
-
 describe("scanFile", () => {
-	const originalFile = Bun.file;
-
-	beforeEach(() => {
-		Bun.file = mock((path: string | URL) => mockBunFile);
-	});
-
-	afterEach(() => {
-		Bun.file = originalFile;
-	});
-
 	it("should scan file and return violations", async () => {
-		mockBunFile.text = () => Promise.resolve("some code with violation\nanother line with warning");
+		const mockContent = "some code with violation\nanother line with warning";
+		const mockReader = {
+			readFile: () => Promise.resolve(mockContent),
+		};
 
-		const violations = await scanFile("test.ts");
+		const violations = await scanFile("test.ts", mockReader);
 
 		expect(violations).toHaveLength(2);
 		expect(violations[0]).toMatchObject({
@@ -89,9 +53,11 @@ describe("scanFile", () => {
 	});
 
 	it("should return empty array for file with no violations", async () => {
-		mockBunFile.text = () => Promise.resolve("clean code");
+		const mockReader = {
+			readFile: () => Promise.resolve("clean code"),
+		};
 
-		const violations = await scanFile("clean.ts");
+		const violations = await scanFile("clean.ts", mockReader);
 
 		expect(violations).toHaveLength(0);
 	});

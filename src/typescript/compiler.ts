@@ -48,12 +48,15 @@ export function traverseSourceFile<T>(
 	visit(sourceFile);
 }
 export async function createAnalyzer(config: AnalyzerConfig): Promise<AnalyzerContext> {
-	const tsconfigPath = config.tsconfigPath ?? "./tsconfig.json";
-	const configFile = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
+	const tsconfigPath: string = config.tsconfigPath ?? "./tsconfig.json";
+	const configFile: { config?: object; error?: ts.Diagnostic } = ts.readConfigFile(
+		tsconfigPath,
+		ts.sys.readFile,
+	);
 	if (configFile.error) {
 		throw new Error(`Failed to read tsconfig.json: ${configFile.error.messageText}`);
 	}
-	const parsedConfig = ts.parseJsonConfigFileContent(
+	const parsedConfig: ts.ParsedCommandLine = ts.parseJsonConfigFileContent(
 		configFile.config,
 		ts.sys,
 		path.dirname(tsconfigPath),
@@ -74,18 +77,26 @@ async function getFilesMatchingPattern(
 	pattern: string,
 	excludePatterns: string[] = [],
 ): Promise<string[]> {
-	const { glob } = await import("glob");
-	const defaultExcludes = ["node_modules/**", "**/node_modules/**", "dist/**", "build/**"];
-	const allExcludes = [...defaultExcludes, ...excludePatterns];
-	const files = await glob(pattern, { absolute: true });
-	const excludeRegexes = allExcludes.map((ex) => {
-		const escaped = ex.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+	const {
+		glob,
+	}: { glob: (pattern: string, options?: { absolute?: boolean }) => Promise<string[]> } =
+		await import("glob");
+	const defaultExcludes: string[] = [
+		"node_modules/**",
+		"**/node_modules/**",
+		"dist/**",
+		"build/**",
+	];
+	const allExcludes: string[] = [...defaultExcludes, ...excludePatterns];
+	const files: string[] = await glob(pattern, { absolute: true });
+	const excludeRegexes: RegExp[] = allExcludes.map((ex: string) => {
+		const escaped: string = ex.replace(/[.+^${}()|[\]\\]/g, "\\$&");
 		return new RegExp(`^${escaped.replace(/\*\*/g, ".*").replace(/\*/g, "[^/]*")}$`);
 	});
-	return files.filter((f) => {
-		const shouldExclude = excludeRegexes.some((regex) => regex.test(f));
+	return files.filter((f: string) => {
+		const shouldExclude: boolean = excludeRegexes.some((regex: RegExp) => regex.test(f));
 		if (shouldExclude) return false;
-		return [".ts", ".tsx", ".mts", ".cts"].some((ext) => f.endsWith(ext));
+		return [".ts", ".tsx", ".mts", ".cts"].some((ext: string) => f.endsWith(ext));
 	});
 }
 export function getLineAndColumn(
@@ -95,7 +106,8 @@ export function getLineAndColumn(
 	line: number;
 	column: number;
 } {
-	const lineStart = sourceFile.getLineAndCharacterOfPosition(pos);
+	const lineStart: { line: number; character: number } =
+		sourceFile.getLineAndCharacterOfPosition(pos);
 	return { line: lineStart.line + 1, column: lineStart.character + 1 };
 }
 export function getNodeText(sourceFile: ts.SourceFile, node: ts.Node): string {
@@ -156,6 +168,7 @@ export const is = {
 	typeOfExpression: (node: ts.Node): node is ts.TypeOfExpression =>
 		node.kind === ts.SyntaxKind.TypeOfExpression,
 	unknownKeyword: (node: ts.Node): boolean => node.kind === ts.SyntaxKind.UnknownKeyword,
+	nonNullExpression: (node: ts.Node): node is ts.NonNullExpression => ts.isNonNullExpression(node),
 };
 export interface NodeLocation {
 	file: string;
