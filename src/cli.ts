@@ -1,15 +1,13 @@
 #!/usr/bin/env bun
-import { exitWithResult, printSummaryReport, scanFiles } from "./index.ts";
+import { exitWithResult, printSummaryReport, type ScanResult, scanFiles } from "./index.ts";
 
 async function main() {
-	const args = process.argv.slice(2);
-	const pattern = args[0] || "**/*.{ts,tsx,js,jsx}";
-
-	console.log("🔍 Scanning for rule violations...\n");
+	const args: string[] = process.argv.slice(2);
+	const pattern: string = args[0] || "**/*.{ts,tsx,js,jsx}";
 
 	try {
-		const { totalViolations, errorCount, warningCount } = await scanFiles(pattern);
-		printSummaryReport(totalViolations, errorCount, warningCount);
+		const { errorCount, warningCount }: ScanResult = await scanFiles(pattern);
+		printSummaryReport(errorCount, warningCount);
 		exitWithResult(errorCount, warningCount);
 	} catch (error) {
 		console.error("❌ Error scanning files:", error);
