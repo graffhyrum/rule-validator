@@ -37,6 +37,7 @@ export async function scanFiles(
 		"debug-cast.ts",
 		"src/rules.ts",
 		"src/rules/*.ts",
+		"scripts/**",
 	],
 	excludeName: string = "rule-validator",
 ): Promise<ScanResult> {

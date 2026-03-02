@@ -49,4 +49,13 @@ export const RULES: Rule[] = [
 			"use TypeScript and behavior-focused assertions instead.",
 		severity: "error",
 	},
+	{
+		name: "no-raw-response-in-elysia",
+		// Excludes legitimate Bun stream reads: new Response(proc.stdout).text()
+		pattern: /new Response\s*\((?!proc\.)/g,
+		message:
+			"ELYSIA IDIOM: Use set.status, set.headers, and redirect() instead of constructing new Response() manually. " +
+			"See https://elysiajs.com/essential/handler.html#set-headers",
+		severity: "warning",
+	},
 ];
