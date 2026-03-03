@@ -37,18 +37,37 @@ export async function scanFiles(pattern: string, options?: ScanOptions): Promise
 	let warningCount = 0;
 	let fileCount = 0;
 	const collected: JsonViolation[] = [];
-	const report = opts.json ? collectJson(collected) : printViolations;
+	const displayViolations: DisplayViolation[] = [];
 	for await (const file of fs.glob(pattern, { exclude: opts.excludePatterns })) {
 		if (!shouldProcessFile(file, opts.excludeName)) continue;
 		fileCount++;
 		const violations: Violation[] = await scanFile(file);
 		if (violations.length === 0) continue;
-		report(path.relative(process.cwd(), file), violations);
+		const relFile = path.relative(process.cwd(), file);
+		if (opts.json) {
+			for (const v of violations) collected.push(toJsonViolation(relFile, v));
+		}
+		for (const v of violations) {
+			displayViolations.push({
+				line: v.line,
+				column: v.column,
+				rule: v.rule,
+				match: v.match,
+				sourceLine: v.sourceLine,
+				file: relFile,
+			});
+		}
 		const counts = countSeverities(violations);
 		errorCount += counts.errors;
 		warningCount += counts.warnings;
 	}
-	return { errorCount, warningCount, fileCount, violations: opts.json ? collected : undefined };
+	return {
+		errorCount,
+		warningCount,
+		fileCount,
+		violations: opts.json ? collected : undefined,
+		displayViolations,
+	};
 }
 function collectJson(target: JsonViolation[]) {
 	return (rel: string, violations: Violation[]) => {
@@ -121,6 +140,9 @@ export interface PrintableViolation {
 	rule: { name: string; message: string; severity: "error" | "warning" };
 	match: string;
 	sourceLine?: string;
+}
+export interface DisplayViolation extends PrintableViolation {
+	file: string;
 }
 export function printViolations(file: string, violations: PrintableViolation[]): void {
 	console.log(pc.dim(file));
@@ -195,6 +217,7 @@ export interface ScanResult {
 	warningCount: number;
 	fileCount?: number;
 	violations?: JsonViolation[];
+	displayViolations?: DisplayViolation[];
 }
 const DEFAULT_EXCLUDE_PATTERNS: readonly string[] = [
 	"node_modules/**",

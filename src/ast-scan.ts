@@ -1,5 +1,4 @@
-import type { ScanResult } from "./index.ts";
-import { printViolations } from "./index.ts";
+import type { DisplayViolation, ScanResult } from "./index.ts";
 import { AST_RULES } from "./rules/all-rules.ts";
 import type { RuleResult } from "./rules/runner.ts";
 import { runRules } from "./rules/runner.ts";
@@ -19,17 +18,22 @@ export async function runAstRules(pattern: string, json?: boolean): Promise<Scan
 function toScanResult(results: RuleResult[], json?: boolean): ScanResult {
 	let errorCount = 0;
 	let warningCount = 0;
+	const displayViolations: DisplayViolation[] = [];
 	for (const result of results) {
 		for (const v of result.violations) {
 			if (v.severity === "error") errorCount++;
 			else warningCount++;
-		}
-		if (!json && result.violations.length > 0) {
-			printAstViolations(result);
+			displayViolations.push({
+				file: result.file,
+				line: v.location.line,
+				column: v.location.column,
+				rule: { name: v.rule.name, message: v.message, severity: v.severity },
+				match: v.code,
+			});
 		}
 	}
 	const violations = json ? collectJsonViolations(results) : undefined;
-	return { errorCount, warningCount, violations };
+	return { errorCount, warningCount, violations, displayViolations };
 }
 
 function collectJsonViolations(results: RuleResult[]) {
@@ -44,15 +48,4 @@ function collectJsonViolations(results: RuleResult[]) {
 			match: v.code,
 		})),
 	);
-}
-
-function printAstViolations(result: RuleResult): void {
-	const violations = result.violations.map((v) => ({
-		file: result.file,
-		line: v.location.line,
-		column: v.location.column,
-		rule: { name: v.rule.name, message: v.message, severity: v.severity },
-		match: v.code,
-	}));
-	printViolations(result.file, violations);
 }
