@@ -37,3 +37,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 debug-cast.ts
 telemetry-id
 .sisyphus/
+
+# bv (beads viewer) local config and caches
+.bv/
+.claude/
