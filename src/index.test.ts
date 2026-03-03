@@ -1,4 +1,4 @@
-import { describe, expect, it, mock } from "bun:test";
+import { afterAll, describe, expect, it, mock } from "bun:test";
 
 // Mock RULES module
 const mockRules = [
@@ -19,6 +19,8 @@ const mockRules = [
 mock.module("./rules", () => ({
 	RULES: mockRules,
 }));
+
+afterAll(() => mock.restore());
 
 import {
 	checkLineForViolations,
