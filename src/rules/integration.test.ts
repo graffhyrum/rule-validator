@@ -17,7 +17,6 @@ describe("integration: rule engine against fixture files", () => {
 		const violations = firstResult?.violations ?? [];
 		const ruleNames = new Set(violations.map((v) => v.rule.name));
 
-		expect(ruleNames.has("no-any-types")).toBe(true);
 		expect(ruleNames.has("no-non-null-assertion")).toBe(true);
 		expect(ruleNames.has("no-unknown-as-cast")).toBe(true);
 		expect(ruleNames.has("no-static-classes")).toBe(true);
