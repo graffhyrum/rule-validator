@@ -1,19 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import { createAnalyzer, runRules } from "../index.js";
+import { runRules } from "./runner.js";
 import { noStaticClassesRule } from "./no-static-classes.js";
+import { createTestSourceFile } from "./test-helpers.js";
 
 describe("no-static-classes rule", () => {
-	const createTestAnalyzer = async (code: string) => {
-		const testFile = "/tmp/test.ts";
-		await Bun.write(testFile, code);
-		return createAnalyzer({
-			pattern: testFile,
-			tsconfigPath: "./tsconfig.json",
-		});
-	};
-
-	it("should detect classes with only static members", async () => {
-		const analyzer = await createTestAnalyzer(`
+	it("should detect classes with only static members", () => {
+		const analyzer = createTestSourceFile(`
 			class Utils {
 				static add(a: number, b: number): number {
 					return a + b;
@@ -24,13 +16,13 @@ describe("no-static-classes rule", () => {
 			}
 		`);
 		const results = runRules({ analyzer, rules: [noStaticClassesRule] });
-		const testFileResults = results.filter((r) => r.file === "/tmp/test.ts");
+		const testFileResults = results.filter((r) => r.file === "test.ts");
 		expect(testFileResults.length).toBe(1);
 		expect(testFileResults[0]?.violations.length).toBe(1);
 	});
 
-	it("should not flag classes with instance members", async () => {
-		const analyzer = await createTestAnalyzer(`
+	it("should not flag classes with instance members", () => {
+		const analyzer = createTestSourceFile(`
 			class Counter {
 				count = 0;
 				static instances = 0;
@@ -45,7 +37,7 @@ describe("no-static-classes rule", () => {
 			}
 		`);
 		const results = runRules({ analyzer, rules: [noStaticClassesRule] });
-		const testFileResults = results.filter((r) => r.file === "/tmp/test.ts");
+		const testFileResults = results.filter((r) => r.file === "test.ts");
 		expect(testFileResults.length).toBe(0);
 	});
 });
