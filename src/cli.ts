@@ -5,6 +5,7 @@ import { runAstRules } from "./ast-scan.ts";
 import {
 	type DisplayViolation,
 	exitWithResult,
+	type JsonViolation,
 	printViolations,
 	type ScanResult,
 	scanFiles,
@@ -87,8 +88,11 @@ function selectCounts(context: {
 	};
 }
 
-function deduplicateDisplayViolations(regexDisplay: unknown[], astDisplay: unknown[]): unknown[] {
-	const allDisplay = [...regexDisplay, ...astDisplay] as DisplayViolation[];
+export function deduplicateDisplayViolations(
+	regexDisplay: DisplayViolation[],
+	astDisplay: DisplayViolation[],
+): DisplayViolation[] {
+	const allDisplay = [...regexDisplay, ...astDisplay];
 	const deduped = new Map<string, DisplayViolation>();
 	for (const v of allDisplay) {
 		const normalizedFile = path.isAbsolute(v.file) ? path.relative(process.cwd(), v.file) : v.file;
@@ -136,19 +140,17 @@ function countFromDisplay(violations: unknown[]): { errorCount: number; warningC
 	return { errorCount, warningCount };
 }
 
-function deduplicateJsonViolations(
-	regexViolations: unknown[],
-	astViolations: unknown[],
-): unknown[] {
-	const deduped = new Map<string, unknown>();
+export function deduplicateJsonViolations(
+	regexViolations: JsonViolation[],
+	astViolations: JsonViolation[],
+): JsonViolation[] {
+	const deduped = new Map<string, JsonViolation>();
 	for (const v of regexViolations) {
-		const vr = v as Record<string, unknown>;
-		const key = `${vr.file}:${vr.line}:${vr.column}:${vr.rule}`;
+		const key = `${v.file}:${v.line}:${v.column}:${v.rule}`;
 		deduped.set(key, v);
 	}
 	for (const v of astViolations) {
-		const vr = v as Record<string, unknown>;
-		const key = `${vr.file}:${vr.line}:${vr.column}:${vr.rule}`;
+		const key = `${v.file}:${v.line}:${v.column}:${v.rule}`;
 		if (!deduped.has(key)) {
 			deduped.set(key, v);
 		}

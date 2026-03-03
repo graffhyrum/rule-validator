@@ -9,12 +9,6 @@ export const RULES: Rule[] = [
 		severity: "error",
 	},
 	{
-		name: "no-any-types",
-		pattern: /:\s*any\b/g,
-		message: "Unexpected `any` type. Use explicit types or ArkType schemas.",
-		severity: "error",
-	},
-	{
 		name: "template-literals-only",
 		pattern: /"\s*\+\s*"|"\S+"\s*\+\s*\S+(?!\s*\))|\S+\s*\+\s*"(?!\s*\))/g,
 		message: "Use template literals instead of string concatenation.",

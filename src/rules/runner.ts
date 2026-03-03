@@ -2,11 +2,10 @@ import type * as ts from "typescript";
 import type { AnalyzerContext, NodeLocation } from "../typescript/compiler.js";
 import { getNodeLocation, getNodeText, traverseSourceFile } from "../typescript/compiler.js";
 import type { Severity } from "./registry.js";
-import { getAllRules } from "./registry.js";
 import type { ASTRule, RuleContext } from "./rule.js";
 
 export interface RunRulesOptions {
-	rules?: ASTRule[];
+	rules: ASTRule[];
 	analyzer: AnalyzerContext;
 }
 
@@ -24,7 +23,7 @@ export interface FoundViolation {
 }
 
 export function runRules(options: RunRulesOptions): RuleResult[] {
-	const rules = options.rules ?? getAllRules();
+	const rules = options.rules;
 	const results: RuleResult[] = [];
 
 	for (const [fileName, sourceFile] of options.analyzer.sourceFiles) {
