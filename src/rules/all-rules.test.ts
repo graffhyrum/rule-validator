@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { Glob } from "bun";
 import { AST_RULES } from "./all-rules.js";
+import { RULES } from "../rules.js";
 
 const INFRA_FILES = new Set(["index.ts", "rule.ts", "runner.ts", "registry.ts", "test-helpers.ts"]);
 describe("AST_RULES registration guard", () => {
@@ -26,6 +27,32 @@ describe("AST_RULES registration guard", () => {
 		}
 	});
 });
+describe("AST_RULES severity contract", () => {
+	it("every AST rule that has a regex counterpart shares the same severity", () => {
+		const regexRulesBySeverity = buildRegexSeverityMap();
+		const mismatches = findSeverityMismatches(regexRulesBySeverity);
+		expect(mismatches).toEqual([]);
+	});
+});
+function buildRegexSeverityMap(): Map<string, string> {
+	const map = new Map<string, string>();
+	for (const rule of RULES) {
+		map.set(rule.name, rule.severity);
+	}
+	return map;
+}
+function findSeverityMismatches(regexSeverity: Map<string, string>): string[] {
+	const mismatches: string[] = [];
+	for (const astRule of AST_RULES) {
+		const regexSev = regexSeverity.get(astRule.name);
+		if (regexSev !== undefined && regexSev !== astRule.severity) {
+			mismatches.push(
+				`${astRule.name}: AST="${astRule.severity}" regex="${regexSev}"`,
+			);
+		}
+	}
+	return mismatches;
+}
 async function collectRuleFiles(): Promise<string[]> {
 	const glob = new Glob("src/rules/*.ts");
 	const files: string[] = [];
