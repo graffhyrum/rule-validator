@@ -9,8 +9,11 @@ export const bunFileReader: FileReader = {
 	readFile: (path: string) => Bun.file(path).text(),
 };
 
-export function exitWithResult(errorCount: number, warningCount: number, fileCount?: number): never {
-	const totalCount: number = errorCount + warningCount;
+export function exitWithResult(
+	errorCount: number,
+	warningCount: number,
+	fileCount?: number,
+): never {
 	if (errorCount > 0) {
 		printSummaryReport(errorCount, warningCount);
 		console.log(pc.red("Fix errors before proceeding."));
@@ -26,55 +29,33 @@ export function exitWithResult(errorCount: number, warningCount: number, fileCou
 		process.exit(0);
 	}
 }
-export async function scanFiles(
-	pattern: string,
-	excludePatterns: readonly string[] = [
-		"node_modules/**",
-		"**/node_modules/**",
-		"dist/**",
-		"build/**",
-		"playwright-report/**",
-		"netlify/**",
-		"**/*.test.ts",
-		"**/*.test.tsx",
-		"**/*.test.js",
-		"**/*.test.jsx",
-		"debug-cast.ts",
-		"src/rules.ts",
-		"src/rules/*.ts",
-		"scripts/**",
-	],
-	excludeName: string = "rule-validator",
-	json?: boolean,
-): Promise<ScanResult> {
-	let errorCount: number = 0;
-	let warningCount: number = 0;
-	let fileCount: number = 0;
-	const jsonViolations: JsonViolation[] = [];
+export async function scanFiles(pattern: string, options?: ScanOptions): Promise<ScanResult> {
+	const opts = applyScanDefaults(options);
+	let errorCount = 0;
+	let warningCount = 0;
+	let fileCount = 0;
+	const collected: JsonViolation[] = [];
+	const report = opts.json ? collectJson(collected) : printReport;
 	const { promises } = await import("node:fs");
 	const path = await import("node:path");
-	for await (const file of promises.glob(pattern, {
-		exclude: excludePatterns,
-	})) {
-		if (!shouldProcessFile(file, excludeName)) {
-			continue;
-		}
+	for await (const file of promises.glob(pattern, { exclude: opts.excludePatterns })) {
+		if (!shouldProcessFile(file, opts.excludeName)) continue;
 		fileCount++;
 		const violations: Violation[] = await scanFile(file);
-		if (violations.length > 0) {
-			const relativePath: string = path.relative(process.cwd(), file);
-			if (json) {
-				for (const v of violations) {
-					jsonViolations.push(toJsonViolation(relativePath, v));
-				}
-			} else {
-				printViolations(relativePath, violations);
-			}
-			errorCount += countBySeverity(violations, "error");
-			warningCount += countBySeverity(violations, "warning");
-		}
+		if (violations.length === 0) continue;
+		report(path.relative(process.cwd(), file), violations);
+		errorCount += countBySeverity(violations, "error");
+		warningCount += countBySeverity(violations, "warning");
 	}
-	return { errorCount, warningCount, fileCount, violations: json ? jsonViolations : undefined };
+	return { errorCount, warningCount, fileCount, violations: opts.json ? collected : undefined };
+}
+function collectJson(target: JsonViolation[]) {
+	return (rel: string, violations: Violation[]) => {
+		for (const v of violations) target.push(toJsonViolation(rel, v));
+	};
+}
+function printReport(rel: string, violations: Violation[]) {
+	printViolations(rel, violations);
 }
 export async function scanFile(
 	filePath: string,
@@ -154,7 +135,8 @@ function toJsonViolation(file: string, v: Violation): JsonViolation {
 export function printSummaryReport(errorCount: number, warningCount: number): void {
 	const total = errorCount + warningCount;
 	const errors = errorCount > 0 ? pc.red(`${errorCount} errors`) : `${errorCount} errors`;
-	const warnings = warningCount > 0 ? pc.yellow(`${warningCount} warnings`) : `${warningCount} warnings`;
+	const warnings =
+		warningCount > 0 ? pc.yellow(`${warningCount} warnings`) : `${warningCount} warnings`;
 	console.log(`\n${pc.bold(`${total} violations`)} (${errors}, ${warnings})`);
 }
 // Rule Compliance Validator - Library
@@ -188,12 +170,42 @@ export interface JsonViolation {
 	severity: "error" | "warning";
 	match: string;
 }
+export interface ScanOptions {
+	excludePatterns?: readonly string[];
+	excludeName?: string;
+	json?: boolean;
+}
 export interface ScanResult {
 	errorCount: number;
 	warningCount: number;
 	fileCount?: number;
 	violations?: JsonViolation[];
 }
+const DEFAULT_EXCLUDE_PATTERNS: readonly string[] = [
+	"node_modules/**",
+	"**/node_modules/**",
+	"dist/**",
+	"build/**",
+	"playwright-report/**",
+	"netlify/**",
+	"**/*.test.ts",
+	"**/*.test.tsx",
+	"**/*.test.js",
+	"**/*.test.jsx",
+	"debug-cast.ts",
+	"src/rules.ts",
+	"src/rules/*.ts",
+	"scripts/**",
+	"**/__fixtures__/**",
+];
+function applyScanDefaults(options?: ScanOptions) {
+	return {
+		excludePatterns: options?.excludePatterns ?? DEFAULT_EXCLUDE_PATTERNS,
+		excludeName: options?.excludeName ?? "rule-validator",
+		json: options?.json,
+	};
+}
+
 export { RULES } from "./rules";
 export * from "./rules/index";
 export * from "./typescript/index";

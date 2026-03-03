@@ -28,7 +28,7 @@ describe("CLI main function", () => {
 
 		await main(["node", "cli.ts"]);
 
-		expect(scanFilesMock).toHaveBeenCalledWith("**/*.{ts,tsx,js,jsx}", undefined, undefined, undefined);
+		expect(scanFilesMock).toHaveBeenCalledWith("**/*.{ts,tsx,js,jsx}", { json: undefined });
 		expect(exitWithResultMock).toHaveBeenCalledWith(0, 0, 0);
 	});
 
@@ -37,7 +37,7 @@ describe("CLI main function", () => {
 
 		await main(["node", "cli.ts", "src/**/*.ts"]);
 
-		expect(scanFilesMock).toHaveBeenCalledWith("src/**/*.ts", undefined, undefined, undefined);
+		expect(scanFilesMock).toHaveBeenCalledWith("src/**/*.ts", { json: undefined });
 		expect(exitWithResultMock).toHaveBeenCalledWith(1, 2, 0);
 	});
 
@@ -76,10 +76,14 @@ describe("CLI main function", () => {
 	});
 });
 
-describe("CLI flags", () => {
+describe("CLI --version flag", () => {
 	it("--version should output the package version", async () => {
 		const { version } = require("../package.json");
-		const writeMock = mock(() => {});
+		const captured: string[] = [];
+		const writeMock = mock((...args: unknown[]) => {
+			captured.push(String(args[0]));
+			return true;
+		});
 		const originalWrite = process.stdout.write;
 		process.stdout.write = writeMock as typeof process.stdout.write;
 
@@ -95,18 +99,22 @@ describe("CLI flags", () => {
 			process.stdout.write = originalWrite;
 		}
 
-		const output = writeMock.mock.calls.map((c) => c[0]).join("");
+		const output = captured.join("");
 		expect(output).toContain(version);
 		expect(exitSpy).toHaveBeenCalledWith(0);
 	});
 
 	it("-V should output the package version", async () => {
 		const { version } = require("../package.json");
-		const writeMock = mock(() => {});
+		const captured: string[] = [];
+		const writeMock = mock((...args: unknown[]) => {
+			captured.push(String(args[0]));
+			return true;
+		});
 		const originalWrite = process.stdout.write;
 		process.stdout.write = writeMock as typeof process.stdout.write;
 
-		const exitSpy = spyOn(process, "exit").mockImplementation((code) => {
+		spyOn(process, "exit").mockImplementation((code) => {
 			throw new Error(`exit ${code}`);
 		});
 
@@ -118,12 +126,18 @@ describe("CLI flags", () => {
 			process.stdout.write = originalWrite;
 		}
 
-		const output = writeMock.mock.calls.map((c) => c[0]).join("");
+		const output = captured.join("");
 		expect(output).toContain(version);
 	});
+});
 
+describe("CLI --help flag", () => {
 	it("--help should output usage information", async () => {
-		const writeMock = mock(() => {});
+		const captured: string[] = [];
+		const writeMock = mock((...args: unknown[]) => {
+			captured.push(String(args[0]));
+			return true;
+		});
 		const originalWrite = process.stdout.write;
 		process.stdout.write = writeMock as typeof process.stdout.write;
 
@@ -139,22 +153,41 @@ describe("CLI flags", () => {
 			process.stdout.write = originalWrite;
 		}
 
-		const output = writeMock.mock.calls.map((c) => c[0]).join("");
+		const output = captured.join("");
 		expect(output).toContain("rule-validator");
 		expect(output).toContain("pattern");
 		expect(output).toContain("--version");
 		expect(output).toContain("--help");
 		expect(exitSpy).toHaveBeenCalledWith(0);
 	});
+});
 
+describe("CLI --json flag", () => {
 	it("--json should output JSON format", async () => {
-		scanFilesMock.mockResolvedValue({ errorCount: 1, warningCount: 0, violations: [{ file: "a.ts", line: 1, column: 1, rule: "test", message: "msg", severity: "error", match: "x" }] });
+		scanFilesMock.mockResolvedValue({
+			errorCount: 1,
+			warningCount: 0,
+			violations: [
+				{
+					file: "a.ts",
+					line: 1,
+					column: 1,
+					rule: "test",
+					message: "msg",
+					severity: "error",
+					match: "x",
+				},
+			],
+		});
 		runAstRulesMock.mockResolvedValue({ errorCount: 0, warningCount: 0, violations: [] });
 
-		const logMock = mock(() => {});
+		const captured: string[] = [];
+		const logMock = mock((...args: unknown[]) => {
+			captured.push(String(args[0]));
+		});
 		const originalLog = console.log;
 		console.log = logMock;
-		const exitSpy = spyOn(process, "exit").mockImplementation((code) => {
+		spyOn(process, "exit").mockImplementation((code) => {
 			throw new Error(`exit ${code}`);
 		});
 
@@ -166,7 +199,7 @@ describe("CLI flags", () => {
 			console.log = originalLog;
 		}
 
-		const output = logMock.mock.calls[0]?.[0];
+		const output = captured[0] ?? "";
 		const parsed = JSON.parse(output);
 		expect(parsed.errorCount).toBe(1);
 		expect(parsed.violations).toHaveLength(1);

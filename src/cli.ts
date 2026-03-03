@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { createCommand } from "commander";
+import { runAstRules } from "./ast-scan.ts";
 import { exitWithResult, type ScanResult, scanFiles } from "./index.ts";
-import { runAstRules, type JsonViolation, collectAstViolations } from "./ast-scan.ts";
 
 const DEFAULT_PATTERN = "**/*.{ts,tsx,js,jsx}";
 
@@ -12,17 +12,13 @@ export async function main(argv?: string[]): Promise<void> {
 	const pattern: string = program.args[0] || DEFAULT_PATTERN;
 
 	try {
-		const regex: ScanResult = await scanFiles(pattern, undefined, undefined, opts.json);
+		const regex: ScanResult = await scanFiles(pattern, { json: opts.json });
 		const ast: ScanResult = await runAstRules(pattern, opts.json);
-		const errorCount = regex.errorCount + ast.errorCount;
-		const warningCount = regex.warningCount + ast.warningCount;
-		const fileCount = (regex.fileCount ?? 0) + (ast.fileCount ?? 0);
+		const combined = combineResults(regex, ast);
 		if (opts.json) {
-			const violations = [...(regex.violations ?? []), ...(ast.violations ?? [])];
-			console.log(JSON.stringify({ errorCount, warningCount, fileCount, violations }));
-			process.exit(errorCount > 0 ? 1 : 0);
+			outputJson(combined);
 		}
-		exitWithResult(errorCount, warningCount, fileCount);
+		exitWithResult(combined.errorCount, combined.warningCount, combined.fileCount);
 	} catch (error) {
 		console.error("Error scanning files:", error instanceof Error ? error.message : error);
 		process.exit(1);
@@ -35,6 +31,25 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 	} catch (e) {
 		console.error(e instanceof Error ? e.message : e);
 	}
+}
+
+function combineResults(regex: ScanResult, ast: ScanResult) {
+	return {
+		errorCount: regex.errorCount + ast.errorCount,
+		warningCount: regex.warningCount + ast.warningCount,
+		fileCount: (regex.fileCount ?? 0) + (ast.fileCount ?? 0),
+		violations: [...(regex.violations ?? []), ...(ast.violations ?? [])],
+	};
+}
+
+function outputJson(result: {
+	errorCount: number;
+	warningCount: number;
+	fileCount: number;
+	violations: unknown[];
+}): never {
+	console.log(JSON.stringify(result));
+	process.exit(result.errorCount > 0 ? 1 : 0);
 }
 
 function buildProgram() {

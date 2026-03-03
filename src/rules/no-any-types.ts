@@ -3,8 +3,7 @@ import type { ASTRule, RuleContext } from "../rules/index.js";
 import { createViolation } from "../rules/index.js";
 import { is } from "../typescript/index.js";
 
-const MESSAGE =
-	"Unexpected `any` type. Use explicit types or ArkType schemas.";
+const MESSAGE = "Unexpected `any` type. Use explicit types or ArkType schemas.";
 
 export const noAnyTypesRule: ASTRule = {
 	name: "no-any-types",
