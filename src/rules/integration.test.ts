@@ -42,9 +42,11 @@ describe("integration: rule engine against fixture files", () => {
 		const forwardViolations = runRules({ analyzer, rules: AST_RULES }).flatMap((r) => r.violations);
 		const reversedViolations = runRules({ analyzer, rules: reversed }).flatMap((r) => r.violations);
 
-		const forwardNames = forwardViolations.map((v) => v.rule.name).sort();
-		const reversedNames = reversedViolations.map((v) => v.rule.name).sort();
-		expect(forwardNames).toEqual(reversedNames);
+		const toKey = (v: { rule: { name: string }; location: { line: number; column: number } }) =>
+			`${v.rule.name}:${v.location.line}:${v.location.column}`;
+		const forwardKeys = forwardViolations.map(toKey).sort();
+		const reversedKeys = reversedViolations.map(toKey).sort();
+		expect(forwardKeys).toEqual(reversedKeys);
 	});
 });
 

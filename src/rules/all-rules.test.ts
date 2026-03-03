@@ -28,7 +28,8 @@ describe("AST_RULES registration guard", () => {
 		const ruleFiles = await collectRuleFiles();
 
 		for (const file of ruleFiles) {
-			const mod = await import(`../../${file}`);
+			const basename = file.split("/").at(-1) ?? file;
+			const mod = await import(`./${basename}`);
 			const exportedRules = Object.values(mod).filter(
 				(v): v is { name: string } =>
 					typeof v === "object" && v !== null && "name" in v && "visit" in v,
