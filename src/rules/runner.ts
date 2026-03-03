@@ -46,16 +46,15 @@ function runRulesOnFile(
 	sourceFile: ts.SourceFile,
 ): FoundViolation[] {
 	const violations: FoundViolation[] = [];
-	const pairs = rules.map((rule) => ({
-		rule,
-		ctx: createRuleContext({ rule, analyzer, sourceFile, violations }),
-	}));
+	const contexts = rules.map((rule) =>
+		createRuleContext({ rule, analyzer, sourceFile, violations }),
+	);
 
 	traverseSourceFile(
 		sourceFile,
 		(node) => {
-			for (const { rule, ctx } of pairs) {
-				rule.visit(ctx, node);
+			for (const ctx of contexts) {
+				ctx.rule.visit(ctx, node);
 			}
 		},
 		null,
