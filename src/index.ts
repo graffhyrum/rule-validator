@@ -44,19 +44,8 @@ export async function scanFiles(pattern: string, options?: ScanOptions): Promise
 		const violations: Violation[] = await scanFile(file);
 		if (violations.length === 0) continue;
 		const relFile = path.relative(process.cwd(), file);
-		if (opts.json) {
-			for (const v of violations) collected.push(toJsonViolation(relFile, v));
-		}
-		for (const v of violations) {
-			displayViolations.push({
-				line: v.line,
-				column: v.column,
-				rule: v.rule,
-				match: v.match,
-				sourceLine: v.sourceLine,
-				file: relFile,
-			});
-		}
+		const context = { violations, relFile, collected, displayViolations, json: opts.json };
+		collectViolations(context);
 		const counts = countSeverities(violations);
 		errorCount += counts.errors;
 		warningCount += counts.warnings;
@@ -69,10 +58,26 @@ export async function scanFiles(pattern: string, options?: ScanOptions): Promise
 		displayViolations,
 	};
 }
-function collectJson(target: JsonViolation[]) {
-	return (rel: string, violations: Violation[]) => {
-		for (const v of violations) target.push(toJsonViolation(rel, v));
-	};
+function collectViolations(context: {
+	violations: Violation[];
+	relFile: string;
+	collected: JsonViolation[];
+	displayViolations: DisplayViolation[];
+	json: boolean | undefined;
+}): void {
+	if (context.json) {
+		for (const v of context.violations) context.collected.push(toJsonViolation(context.relFile, v));
+	}
+	for (const v of context.violations) {
+		context.displayViolations.push({
+			line: v.line,
+			column: v.column,
+			rule: v.rule,
+			match: v.match,
+			sourceLine: v.sourceLine,
+			file: context.relFile,
+		});
+	}
 }
 export async function scanFile(
 	filePath: string,

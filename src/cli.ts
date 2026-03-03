@@ -59,15 +59,12 @@ function deduplicateAndPrint(
 	const regexViolations = regex.violations ?? [];
 	const astViolations = ast.violations ?? [];
 	const dedupedJson = deduplicateJsonViolations(regexViolations, astViolations);
-	const forCounts =
-		dedupedDisplay.length > 0 ? dedupedDisplay : dedupedJson.length > 0 ? dedupedJson : null;
-	const combinedCounts =
-		forCounts !== null
-			? countFromDisplay(forCounts)
-			: {
-					errorCount: regex.errorCount + ast.errorCount,
-					warningCount: regex.warningCount + ast.warningCount,
-				};
+	const combinedCounts = selectCounts({
+		dedupedDisplay,
+		dedupedJson,
+		regex,
+		ast,
+	});
 	return {
 		errorCount: combinedCounts.errorCount,
 		warningCount: combinedCounts.warningCount,
@@ -76,13 +73,25 @@ function deduplicateAndPrint(
 	};
 }
 
+function selectCounts(context: {
+	dedupedDisplay: unknown[];
+	dedupedJson: unknown[];
+	regex: ScanResult;
+	ast: ScanResult;
+}): { errorCount: number; warningCount: number } {
+	if (context.dedupedDisplay.length > 0) return countFromDisplay(context.dedupedDisplay);
+	if (context.dedupedJson.length > 0) return countFromDisplay(context.dedupedJson);
+	return {
+		errorCount: context.regex.errorCount + context.ast.errorCount,
+		warningCount: context.regex.warningCount + context.ast.warningCount,
+	};
+}
+
 function deduplicateDisplayViolations(regexDisplay: unknown[], astDisplay: unknown[]): unknown[] {
 	const allDisplay = [...regexDisplay, ...astDisplay] as DisplayViolation[];
 	const deduped = new Map<string, DisplayViolation>();
 	for (const v of allDisplay) {
-		const normalizedFile = path.isAbsolute(v.file)
-			? path.relative(process.cwd(), v.file)
-			: v.file;
+		const normalizedFile = path.isAbsolute(v.file) ? path.relative(process.cwd(), v.file) : v.file;
 		const key = `${normalizedFile}:${v.line}:${v.column}:${v.rule.name}`;
 		const existing = deduped.get(key);
 		if (!existing || v.sourceLine) {
@@ -126,7 +135,6 @@ function countFromDisplay(violations: unknown[]): { errorCount: number; warningC
 	}
 	return { errorCount, warningCount };
 }
-
 
 function deduplicateJsonViolations(
 	regexViolations: unknown[],
