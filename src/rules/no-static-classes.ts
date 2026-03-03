@@ -3,7 +3,7 @@ import type { ASTRule, RuleContext } from "../rules/index.js";
 import { createViolation } from "../rules/index.js";
 import { is } from "../typescript/index.js";
 
-const MESSAGE = "AVOID STATIC-ONLY CLASSES: Convert to module functions";
+const MESSAGE = "Static-only class detected. Convert to module-level functions.";
 
 export const noStaticClassesRule: ASTRule = {
 	name: "no-static-classes",
@@ -12,16 +12,10 @@ export const noStaticClassesRule: ASTRule = {
 	visit(context: RuleContext, node: ts.Node): void {
 		if (is.classDeclaration(node) && node.name) {
 			const hasInstanceMembers = node.members.some((member) => {
-				if (
-					is.propertyDeclaration(member) &&
-					!member.modifiers?.some((m) => m.kind === ts.SyntaxKind.StaticKeyword)
-				) {
+				if (is.constructorDeclaration(member)) {
 					return true;
 				}
-				if (
-					is.methodDeclaration(member) &&
-					!member.modifiers?.some((m) => m.kind === ts.SyntaxKind.StaticKeyword)
-				) {
+				if (isNonStaticMember(member)) {
 					return true;
 				}
 				return false;
@@ -33,3 +27,15 @@ export const noStaticClassesRule: ASTRule = {
 		}
 	},
 };
+
+function isNonStaticMember(member: ts.ClassElement): boolean {
+	const isMemberKind =
+		is.propertyDeclaration(member) ||
+		is.methodDeclaration(member) ||
+		is.getAccessor(member) ||
+		is.setAccessor(member);
+	if (!isMemberKind) {
+		return false;
+	}
+	return !member.modifiers?.some((m) => m.kind === ts.SyntaxKind.StaticKeyword);
+}

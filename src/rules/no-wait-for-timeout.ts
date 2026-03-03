@@ -4,7 +4,7 @@ import { createViolation } from "../rules/index.js";
 import { is } from "../typescript/index.js";
 
 const MESSAGE =
-	"AVOID STATIC TIMEOUTS: Use Playwright's auto-waiting and web-first assertions instead of waitForTimeout(). See https://playwright.dev/docs/actionability and https://playwright.dev/docs/best-practices#use-web-first-assertions";
+	"Unexpected static timeout. Use Playwright auto-waiting or web-first assertions instead.";
 
 export const noWaitForTimeoutRule: ASTRule = {
 	name: "no-waitForTimeout",

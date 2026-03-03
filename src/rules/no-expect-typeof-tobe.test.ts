@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { runRules } from "./runner.js";
 import { noExpectTypeofToBeRule } from "./no-expect-typeof-tobe.js";
+import { runRules } from "./runner.js";
 import { createTestSourceFile } from "./test-helpers.js";
 
 describe("no-expect-typeof-tobe rule", () => {

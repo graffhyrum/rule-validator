@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { runRules } from "./runner.js";
 import { noToBeInstanceOfRule } from "./no-to-be-instance-of.js";
+import { runRules } from "./runner.js";
 import { createTestSourceFile } from "./test-helpers.js";
 
 describe("no-toBeInstanceOf rule", () => {

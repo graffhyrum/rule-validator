@@ -3,7 +3,7 @@ import type { ASTRule, RuleContext } from "../rules/index.js";
 import { createViolation } from "../rules/index.js";
 import { is } from "../typescript/index.js";
 
-const MESSAGE = "TEMPLATE LITERALS ONLY: Use template literal syntax not string concatenation";
+const MESSAGE = "Use template literals instead of string concatenation.";
 
 export const templateLiteralsOnlyRule: ASTRule = {
 	name: "template-literals-only",

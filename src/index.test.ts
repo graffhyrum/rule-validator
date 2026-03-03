@@ -79,7 +79,7 @@ describe("checkLineForViolations", () => {
 		expect(violations[0]).toMatchObject({
 			file: "test.ts",
 			line: 1,
-			column: 15,
+			column: 16,
 			rule: expect.any(Object),
 			match: "violation",
 		});

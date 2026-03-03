@@ -4,7 +4,7 @@ import { createViolation } from "../rules/index.js";
 import { is } from "../typescript/index.js";
 
 const MESSAGE =
-	"BAN double cast (as unknown as T): Use proper typing, assertion functions, or type-safe patterns instead of escaping through unknown.";
+	"Double cast via `as unknown as T` bypasses type safety. Use assertion functions or proper typing.";
 
 export const noUnknownAsCastRule: ASTRule = {
 	name: "no-unknown-as-cast",
@@ -15,11 +15,7 @@ export const noUnknownAsCastRule: ASTRule = {
 			const exprType = node.expression;
 			if (is.asExpression(exprType)) {
 				const innerType = exprType.type;
-				if (
-					is.unknownKeyword(innerType) ||
-					(is.typeReference(innerType) &&
-						innerType.typeName.getText(context.sourceFile) === "unknown")
-				) {
+				if (is.unknownKeyword(innerType)) {
 					createViolation(context, node, MESSAGE);
 				}
 			}

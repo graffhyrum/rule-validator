@@ -1,3 +1,4 @@
+import pc from "picocolors";
 import { RULES } from "./rules";
 
 export interface FileReader {
@@ -8,16 +9,20 @@ export const bunFileReader: FileReader = {
 	readFile: (path: string) => Bun.file(path).text(),
 };
 
-export function exitWithResult(errorCount: number, warningCount: number): never {
+export function exitWithResult(errorCount: number, warningCount: number, fileCount?: number): never {
 	const totalCount: number = errorCount + warningCount;
-	if (totalCount > 0) printSummaryReport(errorCount, warningCount);
 	if (errorCount > 0) {
-		console.log("\n🚫 Errors found! Fix before proceeding.");
+		printSummaryReport(errorCount, warningCount);
+		console.log(pc.red("Fix errors before proceeding."));
 		process.exit(1);
 	} else if (warningCount > 0) {
-		console.log("\n⚠️ Warnings found. Consider fixing for better compliance.");
+		printSummaryReport(errorCount, warningCount);
+		console.log(pc.yellow("Consider fixing warnings for better compliance."));
 		process.exit(0);
 	} else {
+		const files = fileCount ?? 0;
+		const rules = RULES.length;
+		console.log(pc.green(`All ${files} files passed (${rules} rules checked).`));
 		process.exit(0);
 	}
 }
@@ -40,9 +45,12 @@ export async function scanFiles(
 		"scripts/**",
 	],
 	excludeName: string = "rule-validator",
+	json?: boolean,
 ): Promise<ScanResult> {
 	let errorCount: number = 0;
 	let warningCount: number = 0;
+	let fileCount: number = 0;
+	const jsonViolations: JsonViolation[] = [];
 	const { promises } = await import("node:fs");
 	const path = await import("node:path");
 	for await (const file of promises.glob(pattern, {
@@ -51,15 +59,22 @@ export async function scanFiles(
 		if (!shouldProcessFile(file, excludeName)) {
 			continue;
 		}
+		fileCount++;
 		const violations: Violation[] = await scanFile(file);
 		if (violations.length > 0) {
 			const relativePath: string = path.relative(process.cwd(), file);
-			printViolations(relativePath, violations);
+			if (json) {
+				for (const v of violations) {
+					jsonViolations.push(toJsonViolation(relativePath, v));
+				}
+			} else {
+				printViolations(relativePath, violations);
+			}
 			errorCount += countBySeverity(violations, "error");
 			warningCount += countBySeverity(violations, "warning");
 		}
 	}
-	return { errorCount, warningCount };
+	return { errorCount, warningCount, fileCount, violations: json ? jsonViolations : undefined };
 }
 export async function scanFile(
 	filePath: string,
@@ -90,9 +105,10 @@ export function checkLineForViolations(params: CheckLineParams): void {
 			violations.push({
 				file: filePath,
 				line: lineIndex + 1,
-				column: match.index ?? 0,
+				column: (match.index ?? 0) + 1,
 				rule,
 				match: match[0],
+				sourceLine: line,
 			});
 		}
 	}
@@ -100,26 +116,46 @@ export function checkLineForViolations(params: CheckLineParams): void {
 export function shouldProcessFile(file: string, excludeName?: string): boolean {
 	const isValidExtension: boolean =
 		file.endsWith(".ts") || file.endsWith(".tsx") || file.endsWith(".js") || file.endsWith(".jsx");
-	const isNotSelf: boolean = excludeName ? !file.includes(excludeName) : true;
+	const isNotSelf: boolean = excludeName ? !isSelfPath(file, excludeName) : true;
 	return isValidExtension && isNotSelf;
+}
+function isSelfPath(file: string, excludeName: string): boolean {
+	const segments = file.split("/");
+	return segments.some((s) => s === excludeName || s.startsWith(`${excludeName}.`));
 }
 export function countBySeverity(violations: Violation[], severity: "error" | "warning"): number {
 	return violations.filter((v: Violation) => v.rule.severity === severity).length;
 }
 export function printViolations(file: string, violations: Violation[]): void {
-	const relativePath: string = file; // Caller should provide relative path
-	console.log(`📁 ${relativePath} :`);
+	console.log(pc.dim(file));
 	for (const v of violations) {
-		const icon: string = v.rule.severity === "error" ? "❌" : "⚠️";
-		console.log(`  ${icon} ${relativePath}:${v.line}:${v.column} - ${v.rule.message}`);
-		console.log(`    Found: ${v.match.trim()}`);
+		const location = pc.dim(`  ${v.line}:${v.column}`);
+		const severity = v.rule.severity === "error" ? pc.red("error") : pc.yellow("warning");
+		const ruleName = pc.dim(v.rule.name);
+		console.log(`${location}  ${severity}  ${v.rule.message}  ${ruleName}`);
+		if (v.sourceLine) {
+			console.log(pc.dim(`    ${v.sourceLine}`));
+			console.log(pc.red(`    ${" ".repeat(v.column - 1)}${"~".repeat(v.match.length)}`));
+		}
 	}
 	console.log("");
 }
+function toJsonViolation(file: string, v: Violation): JsonViolation {
+	return {
+		file,
+		line: v.line,
+		column: v.column,
+		rule: v.rule.name,
+		message: v.rule.message,
+		severity: v.rule.severity,
+		match: v.match,
+	};
+}
 export function printSummaryReport(errorCount: number, warningCount: number): void {
-	console.log(
-		`📊 Summary: ${errorCount + warningCount} violations (${errorCount} errors, ${warningCount} warnings)`,
-	);
+	const total = errorCount + warningCount;
+	const errors = errorCount > 0 ? pc.red(`${errorCount} errors`) : `${errorCount} errors`;
+	const warnings = warningCount > 0 ? pc.yellow(`${warningCount} warnings`) : `${warningCount} warnings`;
+	console.log(`\n${pc.bold(`${total} violations`)} (${errors}, ${warnings})`);
 }
 // Rule Compliance Validator - Library
 // Scans code for violations of AGENTS.md rules
@@ -135,6 +171,7 @@ export interface Violation {
 	column: number;
 	rule: Rule;
 	match: string;
+	sourceLine?: string;
 }
 export interface CheckLineParams {
 	line: string;
@@ -142,9 +179,20 @@ export interface CheckLineParams {
 	filePath: string;
 	violations: Violation[];
 }
+export interface JsonViolation {
+	file: string;
+	line: number;
+	column: number;
+	rule: string;
+	message: string;
+	severity: "error" | "warning";
+	match: string;
+}
 export interface ScanResult {
 	errorCount: number;
 	warningCount: number;
+	fileCount?: number;
+	violations?: JsonViolation[];
 }
 export { RULES } from "./rules";
 export * from "./rules/index";

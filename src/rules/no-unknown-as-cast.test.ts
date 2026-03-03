@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { runRules } from "./runner.js";
 import { noUnknownAsCastRule } from "./no-unknown-as-cast.js";
+import { runRules } from "./runner.js";
 import { createTestSourceFile } from "./test-helpers.js";
 
 describe("no-unknown-as-cast rule", () => {

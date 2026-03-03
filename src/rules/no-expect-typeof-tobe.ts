@@ -4,8 +4,7 @@ import { createViolation } from "../rules/index.js";
 import { is } from "../typescript/index.js";
 
 const MESSAGE =
-	"BAN expect(typeof x).toBe(type): Asserting typeof is a type-system concern; " +
-	"use TypeScript and interface contract tests (input→output), or arktype schema assertions, not runtime type checks.";
+	"Unexpected `expect(typeof x).toBe()`. Use TypeScript types or schema assertions instead of runtime type checks.";
 
 export const noExpectTypeofToBeRule: ASTRule = {
 	name: "no-expect-typeof-tobe",

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { runRules } from "./runner.js";
 import { noAnyTypesRule } from "./no-any-types.js";
+import { runRules } from "./runner.js";
 import { createTestSourceFile } from "./test-helpers.js";
 
 describe("no-any-types rule", () => {

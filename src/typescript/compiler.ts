@@ -62,8 +62,11 @@ export async function createAnalyzer(config: AnalyzerConfig): Promise<AnalyzerCo
 	});
 	const checker = program.getTypeChecker();
 	const sourceFiles = new Map<string, ts.SourceFile>();
+	const rootSet = new Set(files);
 	for (const file of program.getSourceFiles()) {
-		sourceFiles.set(file.fileName, file);
+		if (rootSet.has(file.fileName)) {
+			sourceFiles.set(file.fileName, file);
+		}
 	}
 	return { program, checker, sourceFiles };
 }
@@ -134,6 +137,8 @@ export const is = {
 	functionDeclaration: (node: ts.Node): node is ts.FunctionDeclaration =>
 		ts.isFunctionDeclaration(node),
 	classDeclaration: (node: ts.Node): node is ts.ClassDeclaration => ts.isClassDeclaration(node),
+	constructorDeclaration: (node: ts.Node): node is ts.ConstructorDeclaration =>
+		ts.isConstructorDeclaration(node),
 	interfaceDeclaration: (node: ts.Node): node is ts.InterfaceDeclaration =>
 		ts.isInterfaceDeclaration(node),
 	typeAliasDeclaration: (node: ts.Node): node is ts.TypeAliasDeclaration =>

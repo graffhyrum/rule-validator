@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { runRules } from "./runner.js";
 import { noNonNullAssertionRule } from "./no-non-null-assertion.js";
+import { runRules } from "./runner.js";
 import { createTestSourceFile } from "./test-helpers.js";
 
 describe("no-non-null-assertion rule", () => {

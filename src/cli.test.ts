@@ -2,58 +2,55 @@ import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 
 const scanFilesMock = mock();
 const exitWithResultMock = mock();
+const runAstRulesMock = mock();
+
+mock.module("./index.ts", () => ({
+	scanFiles: scanFilesMock,
+	exitWithResult: exitWithResultMock,
+}));
+
+mock.module("./ast-scan.ts", () => ({
+	runAstRules: runAstRulesMock,
+}));
+
+const { main } = await import("./cli.ts");
 
 beforeEach(() => {
 	scanFilesMock.mockClear();
 	exitWithResultMock.mockClear();
+	runAstRulesMock.mockClear();
+	runAstRulesMock.mockResolvedValue({ errorCount: 0, warningCount: 0 });
 });
-
-async function main() {
-	const args: string[] = process.argv.slice(2);
-	const pattern: string = args[0] || "**/*.{ts,tsx,js,jsx}";
-
-	try {
-		const { errorCount, warningCount } = await scanFilesMock(pattern);
-		exitWithResultMock(errorCount, warningCount);
-	} catch (error) {
-		console.error("❌ Error scanning files:", error instanceof Error ? error.message : error);
-		process.exit(1);
-	}
-}
 
 describe("CLI main function", () => {
 	it("should use default pattern when no args and handle successful scan", async () => {
-		process.argv = ["bun", "cli.ts"];
 		scanFilesMock.mockResolvedValue({ errorCount: 0, warningCount: 0 });
 
-		const consoleSpy = spyOn(console, "error");
-		const exitSpy = spyOn(process, "exit");
+		await main(["node", "cli.ts"]);
 
-		await main();
-
-		expect(scanFilesMock).toHaveBeenCalledWith("**/*.{ts,tsx,js,jsx}");
-		expect(exitWithResultMock).toHaveBeenCalledWith(0, 0);
-		expect(consoleSpy).not.toHaveBeenCalled();
-		expect(exitSpy).not.toHaveBeenCalled();
+		expect(scanFilesMock).toHaveBeenCalledWith("**/*.{ts,tsx,js,jsx}", undefined, undefined, undefined);
+		expect(exitWithResultMock).toHaveBeenCalledWith(0, 0, 0);
 	});
 
 	it("should use provided pattern and handle successful scan with errors and warnings", async () => {
-		process.argv = ["bun", "cli.ts", "src/**/*.ts"];
 		scanFilesMock.mockResolvedValue({ errorCount: 1, warningCount: 2 });
 
-		const consoleSpy = spyOn(console, "error");
-		const exitSpy = spyOn(process, "exit");
+		await main(["node", "cli.ts", "src/**/*.ts"]);
 
-		await main();
+		expect(scanFilesMock).toHaveBeenCalledWith("src/**/*.ts", undefined, undefined, undefined);
+		expect(exitWithResultMock).toHaveBeenCalledWith(1, 2, 0);
+	});
 
-		expect(scanFilesMock).toHaveBeenCalledWith("src/**/*.ts");
-		expect(exitWithResultMock).toHaveBeenCalledWith(1, 2);
-		expect(consoleSpy).not.toHaveBeenCalled();
-		expect(exitSpy).not.toHaveBeenCalled();
+	it("should combine regex and AST rule results", async () => {
+		scanFilesMock.mockResolvedValue({ errorCount: 1, warningCount: 0, fileCount: 5 });
+		runAstRulesMock.mockResolvedValue({ errorCount: 2, warningCount: 3, fileCount: 3 });
+
+		await main(["node", "cli.ts"]);
+
+		expect(exitWithResultMock).toHaveBeenCalledWith(3, 3, 8);
 	});
 
 	it("should handle error in scanFiles", async () => {
-		process.argv = ["bun", "cli.ts"];
 		const error = new Error("scan failed");
 		scanFilesMock.mockRejectedValue(error);
 
@@ -65,7 +62,7 @@ describe("CLI main function", () => {
 		});
 
 		try {
-			await main();
+			await main(["node", "cli.ts"]);
 			expect(true).toBe(false);
 		} catch (e) {
 			expect((e as Error).message).toBe("exit 1");
@@ -73,8 +70,106 @@ describe("CLI main function", () => {
 			console.error = originalError;
 		}
 
-		expect(consoleMock).toHaveBeenCalledWith("❌ Error scanning files:", "scan failed");
+		expect(consoleMock).toHaveBeenCalledWith("Error scanning files:", "scan failed");
 		expect(exitSpy).toHaveBeenCalledWith(1);
 		expect(exitWithResultMock).not.toHaveBeenCalled();
+	});
+});
+
+describe("CLI flags", () => {
+	it("--version should output the package version", async () => {
+		const { version } = require("../package.json");
+		const writeMock = mock(() => {});
+		const originalWrite = process.stdout.write;
+		process.stdout.write = writeMock as typeof process.stdout.write;
+
+		const exitSpy = spyOn(process, "exit").mockImplementation((code) => {
+			throw new Error(`exit ${code}`);
+		});
+
+		try {
+			await main(["node", "cli.ts", "--version"]);
+		} catch (e) {
+			expect((e as Error).message).toBe("exit 0");
+		} finally {
+			process.stdout.write = originalWrite;
+		}
+
+		const output = writeMock.mock.calls.map((c) => c[0]).join("");
+		expect(output).toContain(version);
+		expect(exitSpy).toHaveBeenCalledWith(0);
+	});
+
+	it("-V should output the package version", async () => {
+		const { version } = require("../package.json");
+		const writeMock = mock(() => {});
+		const originalWrite = process.stdout.write;
+		process.stdout.write = writeMock as typeof process.stdout.write;
+
+		const exitSpy = spyOn(process, "exit").mockImplementation((code) => {
+			throw new Error(`exit ${code}`);
+		});
+
+		try {
+			await main(["node", "cli.ts", "-V"]);
+		} catch (e) {
+			expect((e as Error).message).toBe("exit 0");
+		} finally {
+			process.stdout.write = originalWrite;
+		}
+
+		const output = writeMock.mock.calls.map((c) => c[0]).join("");
+		expect(output).toContain(version);
+	});
+
+	it("--help should output usage information", async () => {
+		const writeMock = mock(() => {});
+		const originalWrite = process.stdout.write;
+		process.stdout.write = writeMock as typeof process.stdout.write;
+
+		const exitSpy = spyOn(process, "exit").mockImplementation((code) => {
+			throw new Error(`exit ${code}`);
+		});
+
+		try {
+			await main(["node", "cli.ts", "--help"]);
+		} catch (e) {
+			expect((e as Error).message).toBe("exit 0");
+		} finally {
+			process.stdout.write = originalWrite;
+		}
+
+		const output = writeMock.mock.calls.map((c) => c[0]).join("");
+		expect(output).toContain("rule-validator");
+		expect(output).toContain("pattern");
+		expect(output).toContain("--version");
+		expect(output).toContain("--help");
+		expect(exitSpy).toHaveBeenCalledWith(0);
+	});
+
+	it("--json should output JSON format", async () => {
+		scanFilesMock.mockResolvedValue({ errorCount: 1, warningCount: 0, violations: [{ file: "a.ts", line: 1, column: 1, rule: "test", message: "msg", severity: "error", match: "x" }] });
+		runAstRulesMock.mockResolvedValue({ errorCount: 0, warningCount: 0, violations: [] });
+
+		const logMock = mock(() => {});
+		const originalLog = console.log;
+		console.log = logMock;
+		const exitSpy = spyOn(process, "exit").mockImplementation((code) => {
+			throw new Error(`exit ${code}`);
+		});
+
+		try {
+			await main(["node", "cli.ts", "--json"]);
+		} catch (e) {
+			expect((e as Error).message).toBe("exit 1");
+		} finally {
+			console.log = originalLog;
+		}
+
+		const output = logMock.mock.calls[0]?.[0];
+		const parsed = JSON.parse(output);
+		expect(parsed.errorCount).toBe(1);
+		expect(parsed.violations).toHaveLength(1);
+		expect(parsed.violations[0].rule).toBe("test");
 	});
 });

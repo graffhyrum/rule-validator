@@ -4,8 +4,7 @@ import { createViolation } from "../rules/index.js";
 import { is } from "../typescript/index.js";
 
 const MESSAGE =
-	"BAN expect(x).toBeInstanceOf(C): Asserting constructor/instance type is a type-system concern; " +
-	"use TypeScript and behavior-focused assertions instead.";
+	"Unexpected `toBeInstanceOf()`. Use behavior-focused assertions instead of checking constructor types.";
 
 export const noToBeInstanceOfRule: ASTRule = {
 	name: "no-toBeInstanceOf",
