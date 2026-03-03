@@ -16,7 +16,8 @@
 			"!public",
 			"!*.test.ts",
 			"!fixtures",
-			"!**/__fixtures__"
+			"!**/__fixtures__",
+			"!.mcp_data"
 		]
 	},
 	"formatter": {

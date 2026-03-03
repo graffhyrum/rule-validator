@@ -1,4 +1,5 @@
 import path from "node:path";
+import { glob } from "glob";
 import * as ts from "typescript";
 export function getAllDescendants(node: ts.Node): ts.Node[] {
 	const descendants: ts.Node[] = [];
@@ -75,14 +76,6 @@ async function getFilesMatchingPattern(
 	pattern: string,
 	excludePatterns: string[] = [],
 ): Promise<string[]> {
-	const {
-		glob,
-	}: {
-		glob: (
-			pattern: string,
-			options?: { absolute?: boolean; ignore?: string[] },
-		) => Promise<string[]>;
-	} = await import("glob");
 	const defaultExcludes: string[] = [
 		"node_modules/**",
 		"**/node_modules/**",
