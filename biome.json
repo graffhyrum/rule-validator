@@ -15,7 +15,8 @@
 			"!.idea",
 			"!public",
 			"!*.test.ts",
-			"!fixtures"
+			"!fixtures",
+			"!**/__fixtures__"
 		]
 	},
 	"formatter": {
