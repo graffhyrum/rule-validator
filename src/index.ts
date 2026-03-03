@@ -1,3 +1,5 @@
+import { promises as fs } from "node:fs";
+import path from "node:path";
 import pc from "picocolors";
 import { RULES } from "./rules";
 
@@ -35,17 +37,16 @@ export async function scanFiles(pattern: string, options?: ScanOptions): Promise
 	let warningCount = 0;
 	let fileCount = 0;
 	const collected: JsonViolation[] = [];
-	const report = opts.json ? collectJson(collected) : printReport;
-	const { promises } = await import("node:fs");
-	const path = await import("node:path");
-	for await (const file of promises.glob(pattern, { exclude: opts.excludePatterns })) {
+	const report = opts.json ? collectJson(collected) : printViolations;
+	for await (const file of fs.glob(pattern, { exclude: opts.excludePatterns })) {
 		if (!shouldProcessFile(file, opts.excludeName)) continue;
 		fileCount++;
 		const violations: Violation[] = await scanFile(file);
 		if (violations.length === 0) continue;
 		report(path.relative(process.cwd(), file), violations);
-		errorCount += countBySeverity(violations, "error");
-		warningCount += countBySeverity(violations, "warning");
+		const counts = countSeverities(violations);
+		errorCount += counts.errors;
+		warningCount += counts.warnings;
 	}
 	return { errorCount, warningCount, fileCount, violations: opts.json ? collected : undefined };
 }
@@ -53,9 +54,6 @@ function collectJson(target: JsonViolation[]) {
 	return (rel: string, violations: Violation[]) => {
 		for (const v of violations) target.push(toJsonViolation(rel, v));
 	};
-}
-function printReport(rel: string, violations: Violation[]) {
-	printViolations(rel, violations);
 }
 export async function scanFile(
 	filePath: string,
@@ -105,9 +103,26 @@ function isSelfPath(file: string, excludeName: string): boolean {
 	return segments.some((s) => s === excludeName || s.startsWith(`${excludeName}.`));
 }
 export function countBySeverity(violations: Violation[], severity: "error" | "warning"): number {
-	return violations.filter((v: Violation) => v.rule.severity === severity).length;
+	const counts = countSeverities(violations);
+	return severity === "error" ? counts.errors : counts.warnings;
 }
-export function printViolations(file: string, violations: Violation[]): void {
+function countSeverities(violations: Violation[]): { errors: number; warnings: number } {
+	let errors = 0;
+	let warnings = 0;
+	for (const v of violations) {
+		if (v.rule.severity === "error") errors++;
+		else warnings++;
+	}
+	return { errors, warnings };
+}
+export interface PrintableViolation {
+	line: number;
+	column: number;
+	rule: { name: string; message: string; severity: "error" | "warning" };
+	match: string;
+	sourceLine?: string;
+}
+export function printViolations(file: string, violations: PrintableViolation[]): void {
 	console.log(pc.dim(file));
 	for (const v of violations) {
 		const location = pc.dim(`  ${v.line}:${v.column}`);

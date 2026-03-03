@@ -4,6 +4,10 @@ import { runRules } from "./runner.js";
 import { createTestSourceFile } from "./test-helpers.js";
 
 describe("no-any-types rule", () => {
+	it("severity is pinned to warning", () => {
+		expect(noAnyTypesRule.severity).toBe("warning");
+	});
+
 	it("should detect any type usage", () => {
 		const analyzer = createTestSourceFile(`
 			function test(x: any) {

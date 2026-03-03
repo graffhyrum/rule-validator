@@ -1,11 +1,12 @@
 import type * as ts from "typescript";
 import type { AnalyzerContext } from "../typescript/compiler.js";
+import type { Severity } from "./registry.js";
 
 export interface RuleViolation {
 	rule: ASTRule;
 	node: ts.Node;
 	message: string;
-	severity: "error" | "warning";
+	severity: Severity;
 }
 
 export interface RuleContext {
@@ -18,7 +19,7 @@ export interface RuleContext {
 export interface ASTRule {
 	name: string;
 	description: string;
-	severity: "error" | "warning";
+	severity: Severity;
 	visit: (context: RuleContext, node: ts.Node) => void;
 }
 

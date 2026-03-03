@@ -1,3 +1,4 @@
+export { AST_RULES } from "./all-rules.js";
 export {
 	clearRules,
 	getAllRules,
@@ -5,6 +6,7 @@ export {
 	getRuleCount,
 	getRulesBySeverity,
 	registerRule,
+	type Severity,
 } from "./registry.js";
 export {
 	type ASTRule,
@@ -13,7 +15,6 @@ export {
 	type RuleModule,
 	type RuleViolation,
 } from "./rule.js";
-
 export {
 	type FoundViolation,
 	type RuleResult,

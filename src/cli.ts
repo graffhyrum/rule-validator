@@ -12,11 +12,13 @@ export async function main(argv?: string[]): Promise<void> {
 	const pattern: string = program.args[0] || DEFAULT_PATTERN;
 
 	try {
-		const regex: ScanResult = await scanFiles(pattern, { json: opts.json });
-		const ast: ScanResult = await runAstRules(pattern, opts.json);
+		const [regex, ast]: [ScanResult, ScanResult] = await Promise.all([
+			scanFiles(pattern, { json: opts.json }),
+			runAstRules(pattern, opts.json),
+		]);
 		const combined = combineResults(regex, ast);
 		if (opts.json) {
-			outputJson(combined);
+			outputJsonAndExit(combined);
 		}
 		exitWithResult(combined.errorCount, combined.warningCount, combined.fileCount);
 	} catch (error) {
@@ -42,7 +44,7 @@ function combineResults(regex: ScanResult, ast: ScanResult) {
 	};
 }
 
-function outputJson(result: {
+function outputJsonAndExit(result: {
 	errorCount: number;
 	warningCount: number;
 	fileCount: number;

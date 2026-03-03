@@ -1,6 +1,7 @@
 import type * as ts from "typescript";
 import type { AnalyzerContext, NodeLocation } from "../typescript/compiler.js";
 import { getNodeLocation, getNodeText, traverseSourceFile } from "../typescript/compiler.js";
+import type { Severity } from "./registry.js";
 import { getAllRules } from "./registry.js";
 import type { ASTRule } from "./rule.js";
 
@@ -18,7 +19,7 @@ export interface FoundViolation {
 	rule: ASTRule;
 	location: NodeLocation;
 	message: string;
-	severity: "error" | "warning";
+	severity: Severity;
 	code: string;
 }
 
@@ -45,32 +46,45 @@ function runRulesOnFile(
 	sourceFile: ts.SourceFile,
 ): FoundViolation[] {
 	const violations: FoundViolation[] = [];
+	const contexts = rules.map((rule) =>
+		createRuleContext({ rule, analyzer, sourceFile, violations }),
+	);
 
-	for (const rule of rules) {
-		const ruleContext = {
-			rule,
-			analyzer,
-			sourceFile,
-			addViolation: (v: { node: ts.Node; message: string }) => {
-				const location = getNodeLocation(sourceFile, v.node);
-				violations.push({
-					rule,
-					location,
-					message: v.message,
-					severity: rule.severity,
-					code: getNodeText(sourceFile, v.node),
-				});
-			},
-		};
-
-		traverseSourceFile(
-			sourceFile,
-			(node) => {
-				rule.visit(ruleContext, node);
-			},
-			null,
-		);
-	}
+	traverseSourceFile(
+		sourceFile,
+		(node) => {
+			for (let i = 0; i < rules.length; i++) {
+				const rule = rules[i] as ASTRule;
+				const ctx = contexts[i] as ReturnType<typeof createRuleContext>;
+				rule.visit(ctx, node);
+			}
+		},
+		null,
+	);
 
 	return violations;
+}
+
+interface RuleContextOptions {
+	rule: ASTRule;
+	analyzer: AnalyzerContext;
+	sourceFile: ts.SourceFile;
+	violations: FoundViolation[];
+}
+
+function createRuleContext(opts: RuleContextOptions) {
+	return {
+		rule: opts.rule,
+		analyzer: opts.analyzer,
+		sourceFile: opts.sourceFile,
+		addViolation: (v: { node: ts.Node; message: string }) => {
+			opts.violations.push({
+				rule: opts.rule,
+				location: getNodeLocation(opts.sourceFile, v.node),
+				message: v.message,
+				severity: opts.rule.severity,
+				code: getNodeText(opts.sourceFile, v.node),
+			});
+		},
+	};
 }

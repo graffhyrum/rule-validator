@@ -1,6 +1,6 @@
 import type { ASTRule } from "./rule.js";
 
-type Severity = "error" | "warning";
+export type Severity = "error" | "warning";
 
 export function getRulesBySeverity(severity: Severity): ASTRule[] {
 	return getAllRules().filter((r: ASTRule) => r.severity === severity);

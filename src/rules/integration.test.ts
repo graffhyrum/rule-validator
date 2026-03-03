@@ -2,32 +2,13 @@ import { describe, expect, it } from "bun:test";
 import path from "node:path";
 import * as ts from "typescript";
 import type { AnalyzerContext } from "../typescript/compiler.js";
-import { noAnyTypesRule } from "./no-any-types.js";
-import { noExpectTypeofToBeRule } from "./no-expect-typeof-tobe.js";
-import { noNonNullAssertionRule } from "./no-non-null-assertion.js";
-import { noStaticClassesRule } from "./no-static-classes.js";
-import { noToBeInstanceOfRule } from "./no-to-be-instance-of.js";
-import { noUnknownAsCastRule } from "./no-unknown-as-cast.js";
-import { noWaitForTimeoutRule } from "./no-wait-for-timeout.js";
-import type { ASTRule } from "./rule.js";
+import { AST_RULES } from "./all-rules.js";
 import { runRules } from "./runner.js";
-import { templateLiteralsOnlyRule } from "./template-literals-only.js";
-
-const ALL_RULES: ASTRule[] = [
-	noAnyTypesRule,
-	noExpectTypeofToBeRule,
-	noNonNullAssertionRule,
-	noStaticClassesRule,
-	noToBeInstanceOfRule,
-	noUnknownAsCastRule,
-	noWaitForTimeoutRule,
-	templateLiteralsOnlyRule,
-];
 
 describe("integration: rule engine against fixture files", () => {
 	it("should find violations in known-bad fixture", async () => {
 		const analyzer = await createFixtureAnalyzer("known-bad.ts");
-		const results = runRules({ analyzer, rules: ALL_RULES });
+		const results = runRules({ analyzer, rules: AST_RULES });
 
 		expect(results.length).toBe(1);
 
@@ -48,10 +29,22 @@ describe("integration: rule engine against fixture files", () => {
 
 	it("should find zero violations in known-good fixture", async () => {
 		const analyzer = await createFixtureAnalyzer("known-good.ts");
-		const results = runRules({ analyzer, rules: ALL_RULES });
+		const results = runRules({ analyzer, rules: AST_RULES });
 
 		const violations = results.flatMap((r) => r.violations);
 		expect(violations).toEqual([]);
+	});
+
+	it("single-traversal produces identical output regardless of rule order", async () => {
+		const analyzer = await createFixtureAnalyzer("known-bad.ts");
+		const reversed = [...AST_RULES].reverse();
+
+		const forwardViolations = runRules({ analyzer, rules: AST_RULES }).flatMap((r) => r.violations);
+		const reversedViolations = runRules({ analyzer, rules: reversed }).flatMap((r) => r.violations);
+
+		const forwardNames = forwardViolations.map((v) => v.rule.name).sort();
+		const reversedNames = reversedViolations.map((v) => v.rule.name).sort();
+		expect(forwardNames).toEqual(reversedNames);
 	});
 });
 

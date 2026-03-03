@@ -6,11 +6,12 @@ import {
 	getRuleCount,
 	getRulesBySeverity,
 	registerRule,
+	type Severity,
 } from "./registry.js";
 import type { ASTRule } from "./rule.js";
 
 // Helper to create mock ASTRule objects
-const createMockRule = (name: string, severity: "error" | "warning" = "error"): ASTRule => ({
+const createMockRule = (name: string, severity: Severity = "error"): ASTRule => ({
 	name,
 	description: `Test rule ${name}`,
 	severity,
