@@ -24,4 +24,41 @@ describe("no-unknown-as-cast rule", () => {
 		const testFileResults = results.filter((r) => r.file === "test.ts");
 		expect(testFileResults.length).toBe(0);
 	});
+
+	it("should detect three or more double casts in one file", () => {
+		const analyzer = createTestSourceFile(`
+			const a = x as unknown as string;
+			const b = y as unknown as number;
+			const c = z as unknown as boolean;
+		`);
+		const results = runRules({ analyzer, rules: [noUnknownAsCastRule] });
+		const testFileResults = results.filter((r) => r.file === "test.ts");
+		expect(testFileResults.length).toBe(1);
+		expect(testFileResults[0]?.violations.length).toBe(3);
+	});
+
+	it("should detect double cast inside a nested function body", () => {
+		const analyzer = createTestSourceFile(`
+			function convert(val: unknown) {
+				function inner() {
+					return val as unknown as string;
+				}
+				return inner();
+			}
+		`);
+		const results = runRules({ analyzer, rules: [noUnknownAsCastRule] });
+		const testFileResults = results.filter((r) => r.file === "test.ts");
+		expect(testFileResults.length).toBe(1);
+		expect(testFileResults[0]?.violations.length).toBe(1);
+	});
+
+	it("should not flag a single cast to unknown without a second cast", () => {
+		const analyzer = createTestSourceFile(`
+			const a = something as unknown;
+			const b = value as unknown;
+		`);
+		const results = runRules({ analyzer, rules: [noUnknownAsCastRule] });
+		const testFileResults = results.filter((r) => r.file === "test.ts");
+		expect(testFileResults.length).toBe(0);
+	});
 });

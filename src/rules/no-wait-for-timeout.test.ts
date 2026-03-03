@@ -24,4 +24,38 @@ describe("no-waitForTimeout rule", () => {
 		const testFileResults = results.filter((r) => r.file === "test.ts");
 		expect(testFileResults.length).toBe(0);
 	});
+
+	it("should detect multiple waitForTimeout calls in one file", () => {
+		const analyzer = createTestSourceFile(`
+			await page.waitForTimeout(500);
+			await frame.waitForTimeout(1000);
+			await locator.waitForTimeout(250);
+		`);
+		const results = runRules({ analyzer, rules: [noWaitForTimeoutRule] });
+		const testFileResults = results.filter((r) => r.file === "test.ts");
+		expect(testFileResults.length).toBe(1);
+		expect(testFileResults[0]?.violations.length).toBe(3);
+	});
+
+	it("should detect waitForTimeout inside a nested async arrow function", () => {
+		const analyzer = createTestSourceFile(`
+			const delay = async () => {
+				await page.waitForTimeout(2000);
+			};
+		`);
+		const results = runRules({ analyzer, rules: [noWaitForTimeoutRule] });
+		const testFileResults = results.filter((r) => r.file === "test.ts");
+		expect(testFileResults.length).toBe(1);
+		expect(testFileResults[0]?.violations.length).toBe(1);
+	});
+
+	it("should not flag waitFor without the Timeout suffix", () => {
+		const analyzer = createTestSourceFile(`
+			await page.waitFor({ state: 'visible' });
+			const waitForTimeout = 1000;
+		`);
+		const results = runRules({ analyzer, rules: [noWaitForTimeoutRule] });
+		const testFileResults = results.filter((r) => r.file === "test.ts");
+		expect(testFileResults.length).toBe(0);
+	});
 });

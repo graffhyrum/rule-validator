@@ -75,4 +75,55 @@ describe("no-static-classes rule", () => {
 		const testFileResults = results.filter((r) => r.file === "test.ts");
 		expect(testFileResults.length).toBe(0);
 	});
+
+	it("should detect multiple static-only classes in one file", () => {
+		const analyzer = createTestSourceFile(`
+			class MathUtils {
+				static add(a: number, b: number): number {
+					return a + b;
+				}
+			}
+			class StringUtils {
+				static trim(s: string): string {
+					return s.trim();
+				}
+			}
+		`);
+		const results = runRules({ analyzer, rules: [noStaticClassesRule] });
+		const testFileResults = results.filter((r) => r.file === "test.ts");
+		expect(testFileResults.length).toBe(1);
+		expect(testFileResults[0]?.violations.length).toBe(2);
+	});
+
+	it("should detect a static-only class defined inside a function", () => {
+		const analyzer = createTestSourceFile(`
+			function getUtils() {
+				class InnerUtils {
+					static helper(): string {
+						return "help";
+					}
+				}
+				return InnerUtils;
+			}
+		`);
+		const results = runRules({ analyzer, rules: [noStaticClassesRule] });
+		const testFileResults = results.filter((r) => r.file === "test.ts");
+		expect(testFileResults.length).toBe(1);
+		expect(testFileResults[0]?.violations.length).toBe(1);
+	});
+
+	it("should not flag a class with all static members plus one instance method", () => {
+		const analyzer = createTestSourceFile(`
+			class Hybrid {
+				static count = 0;
+				static create() { return new Hybrid(); }
+				describe(): string {
+					return "instance";
+				}
+			}
+		`);
+		const results = runRules({ analyzer, rules: [noStaticClassesRule] });
+		const testFileResults = results.filter((r) => r.file === "test.ts");
+		expect(testFileResults.length).toBe(0);
+	});
 });
