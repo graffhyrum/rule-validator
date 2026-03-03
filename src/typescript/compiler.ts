@@ -11,18 +11,12 @@ export function getAllDescendants(node: ts.Node): ts.Node[] {
 }
 export function createVisitor<T>(options: VisitorOptions<T>): (node: ts.Node, ctx: T) => void {
 	return (node: ts.Node, ctx: T) => {
-		options.enter?.(node, ctx);
-		ts.forEachChild(node, (child) => {
-			options.enter?.(child, ctx);
-			function visit(n: ts.Node): void {
-				options.enter?.(n, ctx);
-				ts.forEachChild(n, visit);
-				options.leave?.(n, ctx);
-			}
-			visit(child);
-			options.leave?.(child, ctx);
-		});
-		options.leave?.(node, ctx);
+		function visit(n: ts.Node): void {
+			options.enter?.(n, ctx);
+			ts.forEachChild(n, visit);
+			options.leave?.(n, ctx);
+		}
+		visit(node);
 	};
 }
 export function getNodeLocation(sourceFile: ts.SourceFile, node: ts.Node): NodeLocation {
@@ -73,14 +67,19 @@ export async function createAnalyzer(config: AnalyzerConfig): Promise<AnalyzerCo
 	}
 	return { program, checker, sourceFiles };
 }
+const TS_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts"];
 async function getFilesMatchingPattern(
 	pattern: string,
 	excludePatterns: string[] = [],
 ): Promise<string[]> {
 	const {
 		glob,
-	}: { glob: (pattern: string, options?: { absolute?: boolean }) => Promise<string[]> } =
-		await import("glob");
+	}: {
+		glob: (
+			pattern: string,
+			options?: { absolute?: boolean; ignore?: string[] },
+		) => Promise<string[]>;
+	} = await import("glob");
 	const defaultExcludes: string[] = [
 		"node_modules/**",
 		"**/node_modules/**",
@@ -88,16 +87,8 @@ async function getFilesMatchingPattern(
 		"build/**",
 	];
 	const allExcludes: string[] = [...defaultExcludes, ...excludePatterns];
-	const files: string[] = await glob(pattern, { absolute: true });
-	const excludeRegexes: RegExp[] = allExcludes.map((ex: string) => {
-		const escaped: string = ex.replace(/[.+^${}()|[\]\\]/g, "\\$&");
-		return new RegExp(`^${escaped.replace(/\*\*/g, ".*").replace(/\*/g, "[^/]*")}$`);
-	});
-	return files.filter((f: string) => {
-		const shouldExclude: boolean = excludeRegexes.some((regex: RegExp) => regex.test(f));
-		if (shouldExclude) return false;
-		return [".ts", ".tsx", ".mts", ".cts"].some((ext: string) => f.endsWith(ext));
-	});
+	const files: string[] = await glob(pattern, { absolute: true, ignore: allExcludes });
+	return files.filter((f: string) => TS_EXTENSIONS.some((ext: string) => f.endsWith(ext)));
 }
 export function getLineAndColumn(
 	sourceFile: ts.SourceFile,
@@ -178,7 +169,6 @@ export interface NodeLocation {
 	endColumn: number;
 }
 export interface VisitorOptions<T> {
-	context: T;
 	enter?: (node: ts.Node, ctx: T) => void;
 	leave?: (node: ts.Node, ctx: T) => void;
 }

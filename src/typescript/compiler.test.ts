@@ -54,7 +54,6 @@ describe("compiler", () => {
 
 			const calls: string[] = [];
 			const visitor = createVisitor({
-				context: {},
 				enter: (node, _ctx) => {
 					calls.push(`enter-${node.kind}`);
 				},
