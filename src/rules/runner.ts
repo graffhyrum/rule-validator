@@ -3,7 +3,7 @@ import type { AnalyzerContext, NodeLocation } from "../typescript/compiler.js";
 import { getNodeLocation, getNodeText, traverseSourceFile } from "../typescript/compiler.js";
 import type { Severity } from "./registry.js";
 import { getAllRules } from "./registry.js";
-import type { ASTRule } from "./rule.js";
+import type { ASTRule, RuleContext } from "./rule.js";
 
 export interface RunRulesOptions {
 	rules?: ASTRule[];
@@ -46,16 +46,15 @@ function runRulesOnFile(
 	sourceFile: ts.SourceFile,
 ): FoundViolation[] {
 	const violations: FoundViolation[] = [];
-	const contexts = rules.map((rule) =>
-		createRuleContext({ rule, analyzer, sourceFile, violations }),
-	);
+	const pairs = rules.map((rule) => ({
+		rule,
+		ctx: createRuleContext({ rule, analyzer, sourceFile, violations }),
+	}));
 
 	traverseSourceFile(
 		sourceFile,
 		(node) => {
-			for (let i = 0; i < rules.length; i++) {
-				const rule = rules[i] as ASTRule;
-				const ctx = contexts[i] as ReturnType<typeof createRuleContext>;
+			for (const { rule, ctx } of pairs) {
 				rule.visit(ctx, node);
 			}
 		},
@@ -72,7 +71,7 @@ interface RuleContextOptions {
 	violations: FoundViolation[];
 }
 
-function createRuleContext(opts: RuleContextOptions) {
+function createRuleContext(opts: RuleContextOptions): RuleContext {
 	return {
 		rule: opts.rule,
 		analyzer: opts.analyzer,
