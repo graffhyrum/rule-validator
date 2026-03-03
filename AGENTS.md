@@ -65,3 +65,27 @@ ubs --format=json .                        # Full scan
 ubs --staged                               # Scan staged files only
 ```
 Run `ubs --diff` before every commit. Convert critical/high findings to P0/P1 beads.
+
+## TypeScript Coding Rules
+
+### Context-carries-subject pattern
+Before creating a zip/pair structure like `{ subject, ctx }`, check whether the
+context type already holds a reference to the subject (e.g. `ctx.rule`). If it
+does, the outer key is redundant — iterate over contexts and access the subject
+via the context instead.
+
+```typescript
+// ❌ redundant: ctx.rule === rule
+const pairs = rules.map(rule => ({ rule, ctx: createCtx(rule) }));
+for (const { rule, ctx } of pairs) { rule.visit(ctx, node); }
+
+// ✅ context already carries the reference
+const contexts = rules.map(rule => createCtx(rule));
+for (const ctx of contexts) { ctx.rule.visit(ctx, node); }
+```
+
+Read all imported type files before designing loop structures involving context objects.
+
+### Code quality gate
+Run `/simplify` before committing. The `PostToolUse` UBS hook catches security issues;
+`/simplify` catches redundancy and quality issues that static analysis misses.
