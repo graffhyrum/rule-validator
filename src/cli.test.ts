@@ -1,12 +1,10 @@
 import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 
 const scanFilesMock = mock();
-const printSummaryReportMock = mock();
 const exitWithResultMock = mock();
 
 beforeEach(() => {
 	scanFilesMock.mockClear();
-	printSummaryReportMock.mockClear();
 	exitWithResultMock.mockClear();
 });
 
@@ -16,7 +14,6 @@ async function main() {
 
 	try {
 		const { errorCount, warningCount } = await scanFilesMock(pattern);
-		printSummaryReportMock(errorCount, warningCount);
 		exitWithResultMock(errorCount, warningCount);
 	} catch (error) {
 		console.error("❌ Error scanning files:", error instanceof Error ? error.message : error);
@@ -35,7 +32,6 @@ describe("CLI main function", () => {
 		await main();
 
 		expect(scanFilesMock).toHaveBeenCalledWith("**/*.{ts,tsx,js,jsx}");
-		expect(printSummaryReportMock).toHaveBeenCalledWith(0, 0);
 		expect(exitWithResultMock).toHaveBeenCalledWith(0, 0);
 		expect(consoleSpy).not.toHaveBeenCalled();
 		expect(exitSpy).not.toHaveBeenCalled();
@@ -51,7 +47,6 @@ describe("CLI main function", () => {
 		await main();
 
 		expect(scanFilesMock).toHaveBeenCalledWith("src/**/*.ts");
-		expect(printSummaryReportMock).toHaveBeenCalledWith(1, 2);
 		expect(exitWithResultMock).toHaveBeenCalledWith(1, 2);
 		expect(consoleSpy).not.toHaveBeenCalled();
 		expect(exitSpy).not.toHaveBeenCalled();
@@ -80,7 +75,6 @@ describe("CLI main function", () => {
 
 		expect(consoleMock).toHaveBeenCalledWith("❌ Error scanning files:", "scan failed");
 		expect(exitSpy).toHaveBeenCalledWith(1);
-		expect(printSummaryReportMock).not.toHaveBeenCalled();
 		expect(exitWithResultMock).not.toHaveBeenCalled();
 	});
 });
