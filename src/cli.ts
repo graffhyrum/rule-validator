@@ -3,9 +3,9 @@ import path from "node:path";
 import { createCommand } from "commander";
 import { runAstRules } from "./ast-scan.ts";
 import {
+	type DisplayViolation,
 	exitWithResult,
 	printViolations,
-	type DisplayViolation,
 	type ScanResult,
 	scanFiles,
 } from "./index.ts";
@@ -23,7 +23,7 @@ export async function main(argv?: string[]): Promise<void> {
 			scanFiles(pattern, { json: opts.json }),
 			runAstRules(pattern, opts.json),
 		]);
-		const combined = deduplicateAndPrint(regex, ast);
+		const combined = deduplicateAndPrint(regex, ast, !opts.json);
 		if (opts.json) {
 			outputJsonAndExit(combined);
 		}
@@ -45,6 +45,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 function deduplicateAndPrint(
 	regex: ScanResult,
 	ast: ScanResult,
+	shouldPrint: boolean = true,
 ): {
 	errorCount: number;
 	warningCount: number;
@@ -53,21 +54,29 @@ function deduplicateAndPrint(
 } {
 	const regexDisplay = regex.displayViolations ?? [];
 	const astDisplay = ast.displayViolations ?? [];
-	const allDisplay = [...regexDisplay, ...astDisplay];
-	if (allDisplay.length > 0) printDisplayViolations(regexDisplay, astDisplay);
+	const dedupedDisplay = deduplicateDisplayViolations(regexDisplay, astDisplay);
+	if (shouldPrint && dedupedDisplay.length > 0) printDedupedDisplay(dedupedDisplay);
 	const regexViolations = regex.violations ?? [];
 	const astViolations = ast.violations ?? [];
-	const deduped = deduplicateJsonViolations(regexViolations, astViolations);
-	const combinedCounts = deduped.length > 0 ? countFromViolations(deduped) : combineScanCounts(regex, ast);
+	const dedupedJson = deduplicateJsonViolations(regexViolations, astViolations);
+	const forCounts =
+		dedupedDisplay.length > 0 ? dedupedDisplay : dedupedJson.length > 0 ? dedupedJson : null;
+	const combinedCounts =
+		forCounts !== null
+			? countFromDisplay(forCounts)
+			: {
+					errorCount: regex.errorCount + ast.errorCount,
+					warningCount: regex.warningCount + ast.warningCount,
+				};
 	return {
 		errorCount: combinedCounts.errorCount,
 		warningCount: combinedCounts.warningCount,
 		fileCount: (regex.fileCount ?? 0) + (ast.fileCount ?? 0),
-		violations: deduped,
+		violations: dedupedJson.length > 0 ? dedupedJson : dedupedDisplay,
 	};
 }
 
-function printDisplayViolations(regexDisplay: unknown[], astDisplay: unknown[]): void {
+function deduplicateDisplayViolations(regexDisplay: unknown[], astDisplay: unknown[]): unknown[] {
 	const allDisplay = [...regexDisplay, ...astDisplay] as DisplayViolation[];
 	const deduped = new Map<string, DisplayViolation>();
 	for (const v of allDisplay) {
@@ -80,7 +89,11 @@ function printDisplayViolations(regexDisplay: unknown[], astDisplay: unknown[]):
 			deduped.set(key, { ...v, file: normalizedFile });
 		}
 	}
-	const sorted = Array.from(deduped.values()).sort((a, b) => {
+	return Array.from(deduped.values());
+}
+
+function printDedupedDisplay(violations: unknown[]): void {
+	const sorted = (violations as DisplayViolation[]).sort((a, b) => {
 		if (a.file !== b.file) return a.file.localeCompare(b.file);
 		if (a.line !== b.line) return a.line - b.line;
 		return a.column - b.column;
@@ -91,8 +104,8 @@ function printDisplayViolations(regexDisplay: unknown[], astDisplay: unknown[]):
 		const group = byFile.get(v.file);
 		if (group) group.push(v);
 	}
-	for (const [file, violations] of byFile) {
-		const printable = violations.map((v) => ({
+	for (const [file, viols] of byFile) {
+		const printable = viols.map((v) => ({
 			line: v.line,
 			column: v.column,
 			rule: v.rule,
@@ -102,6 +115,18 @@ function printDisplayViolations(regexDisplay: unknown[], astDisplay: unknown[]):
 		printViolations(file, printable);
 	}
 }
+
+function countFromDisplay(violations: unknown[]): { errorCount: number; warningCount: number } {
+	let errorCount = 0;
+	let warningCount = 0;
+	for (const v of violations) {
+		const vr = v as Record<string, unknown>;
+		if (vr.severity === "error") errorCount++;
+		else warningCount++;
+	}
+	return { errorCount, warningCount };
+}
+
 
 function deduplicateJsonViolations(
 	regexViolations: unknown[],
@@ -121,24 +146,6 @@ function deduplicateJsonViolations(
 		}
 	}
 	return Array.from(deduped.values());
-}
-
-function countFromViolations(violations: unknown[]): { errorCount: number; warningCount: number } {
-	let errorCount = 0;
-	let warningCount = 0;
-	for (const v of violations) {
-		const vr = v as Record<string, unknown>;
-		if (vr.severity === "error") errorCount++;
-		else warningCount++;
-	}
-	return { errorCount, warningCount };
-}
-
-function combineScanCounts(regex: ScanResult, ast: ScanResult) {
-	return {
-		errorCount: regex.errorCount + ast.errorCount,
-		warningCount: regex.warningCount + ast.warningCount,
-	};
 }
 
 function outputJsonAndExit(result: {
