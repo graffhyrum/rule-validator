@@ -2,8 +2,8 @@
 // Walks from startDir toward fs root to find the config file
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { minimatch } from "minimatch";
 import { type } from "arktype";
+import { minimatch } from "minimatch";
 
 const RuleConfig = type({ "exclude?": "string[]" });
 
@@ -33,7 +33,7 @@ async function findConfigFile(startDir: string): Promise<string | null> {
 	}
 }
 
-async function fileExists(filePath: string): Promise<boolean> {
+function fileExists(filePath: string): Promise<boolean> {
 	return fs
 		.access(filePath)
 		.then(() => true)
