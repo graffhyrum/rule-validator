@@ -1,7 +1,8 @@
-// Project config loader for rule-validator.config.json
+// Project config loader and shared exclusion utilities for rule-validator.config.json
 // Walks from startDir toward fs root to find the config file
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { minimatch } from "minimatch";
 import { type } from "arktype";
 
 const RuleConfig = type({ "exclude?": "string[]" });
@@ -61,4 +62,14 @@ function validateConfig(parsed: unknown, configPath: string): ProjectConfig {
 		throw new Error(`rule-validator.config.json at ${configPath} is invalid: ${result.summary}`);
 	}
 	return result;
+}
+
+export function isFileExcludedForRule(
+	relPath: string,
+	ruleName: string,
+	ruleExcludes: Record<string, { exclude?: string[] }>,
+): boolean {
+	const patterns = ruleExcludes[ruleName]?.exclude;
+	if (!patterns || patterns.length === 0) return false;
+	return patterns.some((pattern) => minimatch(relPath, pattern, { matchBase: false }));
 }

@@ -1,8 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { minimatch } from "minimatch";
 import pc from "picocolors";
-import type { ProjectConfig } from "./config.ts";
+import { isFileExcludedForRule, type ProjectConfig } from "./config.ts";
 import { RULES } from "./rules";
 
 export interface FileReader {
@@ -128,15 +127,6 @@ export function checkLineForViolations(params: CheckLineParams): void {
 	}
 }
 
-function isFileExcludedForRule(
-	relPath: string,
-	ruleName: string,
-	ruleExcludes: Record<string, { exclude?: string[] }>,
-): boolean {
-	const patterns = ruleExcludes[ruleName]?.exclude;
-	if (!patterns || patterns.length === 0) return false;
-	return patterns.some((pattern) => minimatch(relPath, pattern, { matchBase: false }));
-}
 export function shouldProcessFile(file: string, excludeName?: string): boolean {
 	const isValidExtension: boolean =
 		file.endsWith(".ts") || file.endsWith(".tsx") || file.endsWith(".js") || file.endsWith(".jsx");

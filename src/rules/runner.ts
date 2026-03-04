@@ -1,6 +1,6 @@
-import { minimatch } from "minimatch";
 import path from "node:path";
 import type * as ts from "typescript";
+import { isFileExcludedForRule } from "../config.ts";
 import type { AnalyzerContext, NodeLocation } from "../typescript/compiler.js";
 import { getNodeLocation, getNodeText, traverseSourceFile } from "../typescript/compiler.js";
 import type { Severity } from "./registry.js";
@@ -32,7 +32,9 @@ export function runRules(options: RunRulesOptions): RuleResult[] {
 
 	for (const [fileName, sourceFile] of options.analyzer.sourceFiles) {
 		const relFile = path.relative(process.cwd(), fileName);
-		const activeRules = rules.filter((rule) => !isFileExcludedForRule(relFile, rule.name, ruleExcludes));
+		const activeRules = rules.filter(
+			(rule) => !isFileExcludedForRule(relFile, rule.name, ruleExcludes),
+		);
 		const violations = runRulesOnFile(activeRules, options.analyzer, sourceFile);
 		if (violations.length > 0) {
 			results.push({
@@ -43,16 +45,6 @@ export function runRules(options: RunRulesOptions): RuleResult[] {
 	}
 
 	return results;
-}
-
-function isFileExcludedForRule(
-	relPath: string,
-	ruleName: string,
-	ruleExcludes: Record<string, { exclude?: string[] }>,
-): boolean {
-	const patterns = ruleExcludes[ruleName]?.exclude;
-	if (!patterns || patterns.length === 0) return false;
-	return patterns.some((pattern) => minimatch(relPath, pattern, { matchBase: false }));
 }
 
 function runRulesOnFile(

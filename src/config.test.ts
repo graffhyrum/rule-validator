@@ -1,14 +1,16 @@
-// Tests for project config loading and validation
-// Covers: discovery, merging, per-rule exclusions, error cases
+// Tests for project config loading, validation, and exclusion integration
+// Covers: discovery, merging, per-rule exclusions, error cases, scan integration
 import { afterEach, describe, expect, it } from "bun:test";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { loadProjectConfig } from "./config.ts";
+import { scanFile, scanFiles } from "./index.ts";
 
 function makeTempDir(): string {
-	return mkdirSync(path.join(os.tmpdir(), `rv-config-test-${Date.now()}`), { recursive: true }) as unknown as string
-		?? path.join(os.tmpdir(), `rv-config-test-${Date.now()}`);
+	const dir = path.join(os.tmpdir(), `rv-config-test-${Date.now()}`);
+	mkdirSync(dir, { recursive: true });
+	return dir;
 }
 
 describe("loadProjectConfig", () => {
@@ -78,5 +80,40 @@ describe("loadProjectConfig", () => {
 			JSON.stringify({ exclude: "not-an-array" }),
 		);
 		await expect(loadProjectConfig(tmpDir)).rejects.toThrow("invalid");
+	});
+});
+
+describe("config exclusion integration", () => {
+	const testDir = path.join(process.cwd(), ".test-tmp");
+	let fixtureDir: string;
+
+	afterEach(() => {
+		if (fixtureDir) rmSync(fixtureDir, { recursive: true, force: true });
+	});
+
+	it("per-rule exclude suppresses violations for that rule only", async () => {
+		fixtureDir = path.join(testDir, `e2e-${Date.now()}`);
+		mkdirSync(fixtureDir, { recursive: true });
+		const fixturePath = path.join(fixtureDir, "target.ts");
+		writeFileSync(
+			fixturePath,
+			'const a = "hello" as unknown as number;\nconst b = "x" + "y";\n',
+		);
+		const relPattern = path.relative(process.cwd(), fixtureDir) + "/target.ts";
+		const ruleExcludes = { "no-unknown-as-cast": { exclude: [relPattern] } };
+		const violations = await scanFile(fixturePath, undefined, ruleExcludes);
+		const ruleNames = violations.map((v) => v.rule.name);
+		expect(ruleNames).not.toContain("no-unknown-as-cast");
+		expect(ruleNames).toContain("template-literals-only");
+	});
+
+	it("global exclude prevents file from being scanned at all", async () => {
+		fixtureDir = path.join(testDir, `e2e-global-${Date.now()}`);
+		const srcDir = path.join(fixtureDir, "src");
+		mkdirSync(srcDir, { recursive: true });
+		writeFileSync(path.join(srcDir, "target.ts"), 'const a = "hello" as unknown as number;\n');
+		const relSrc = path.relative(process.cwd(), srcDir);
+		const result = await scanFiles(`${relSrc}/**/*.ts`, { config: { exclude: [`${relSrc}/**`] } });
+		expect(result.errorCount).toBe(0);
 	});
 });
