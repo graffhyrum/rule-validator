@@ -1,13 +1,13 @@
 // Tests for createViolation factory in rule.ts
 // Verifies pass-through behavior without inspecting AST node internals
-import { describe, it, expect, mock } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
 import type * as ts from "typescript";
-import { createViolation } from "./rule.js";
 import type { RuleContext } from "./rule.js";
+import { createViolation } from "./rule.js";
 
 function makeContext(addViolation: RuleContext["addViolation"]): RuleContext {
 	return {
-		rule: { name: "test-rule", description: "test", severity: "warn", visit: () => {} },
+		rule: { name: "test-rule", description: "test", severity: "warning", visit: () => {} },
 		analyzer: {} as RuleContext["analyzer"],
 		sourceFile: {} as ts.SourceFile,
 		addViolation,

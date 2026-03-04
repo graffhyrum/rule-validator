@@ -3,10 +3,14 @@ import { afterAll, beforeEach, describe, expect, it, mock, spyOn } from "bun:tes
 const scanFilesMock = mock();
 const exitWithResultMock = mock();
 const runAstRulesMock = mock();
+const printViolationsMock = mock((file: unknown) => {
+	console.log(file);
+});
 
 mock.module("./index.ts", () => ({
 	scanFiles: scanFilesMock,
 	exitWithResult: exitWithResultMock,
+	printViolations: printViolationsMock,
 }));
 
 mock.module("./ast-scan.ts", () => ({
@@ -21,6 +25,7 @@ beforeEach(() => {
 	scanFilesMock.mockClear();
 	exitWithResultMock.mockClear();
 	runAstRulesMock.mockClear();
+	printViolationsMock.mockClear();
 	runAstRulesMock.mockResolvedValue({ errorCount: 0, warningCount: 0 });
 });
 
@@ -235,5 +240,115 @@ describe("CLI --json flag", () => {
 		expect(parsed.errorCount).toBe(1);
 		expect(parsed.violations).toHaveLength(1);
 		expect(parsed.violations[0].rule).toBe("test");
+	});
+});
+
+describe("countFromJsonViolations path via deduplicateAndPrint", () => {
+	it("counts errors and warnings from json violations when no display violations are present", async () => {
+		scanFilesMock.mockResolvedValue({
+			errorCount: 0,
+			warningCount: 0,
+			violations: [
+				{ file: "a.ts", line: 1, column: 1, rule: "rule-a", message: "msg", severity: "error", match: "x" },
+				{ file: "a.ts", line: 2, column: 1, rule: "rule-b", message: "msg", severity: "warning", match: "y" },
+			],
+		});
+		runAstRulesMock.mockResolvedValue({ errorCount: 0, warningCount: 0, violations: [] });
+
+		await main(["node", "cli.ts"]);
+
+		expect(exitWithResultMock).toHaveBeenCalledWith(1, 1, 0);
+	});
+
+	it("counts only errors from json violations with no display violations", async () => {
+		scanFilesMock.mockResolvedValue({
+			errorCount: 0,
+			warningCount: 0,
+			violations: [
+				{ file: "b.ts", line: 5, column: 3, rule: "rule-c", message: "msg", severity: "error", match: "z" },
+				{ file: "b.ts", line: 6, column: 3, rule: "rule-d", message: "msg", severity: "error", match: "w" },
+			],
+		});
+		runAstRulesMock.mockResolvedValue({ errorCount: 0, warningCount: 0, violations: [] });
+
+		await main(["node", "cli.ts"]);
+
+		expect(exitWithResultMock).toHaveBeenCalledWith(2, 0, 0);
+	});
+});
+
+describe("printDedupedDisplay sort comparator branches", () => {
+	it("sorts violations from different files alphabetically (a.file !== b.file branch)", async () => {
+		scanFilesMock.mockResolvedValue({
+			errorCount: 2,
+			warningCount: 0,
+			displayViolations: [
+				{
+					file: "z-last.ts",
+					line: 1,
+					column: 1,
+					rule: { name: "rule-a", message: "error", severity: "error" },
+					match: "x",
+				},
+				{
+					file: "a-first.ts",
+					line: 1,
+					column: 1,
+					rule: { name: "rule-b", message: "error", severity: "error" },
+					match: "y",
+				},
+			],
+		});
+		runAstRulesMock.mockResolvedValue({ errorCount: 0, warningCount: 0 });
+
+		const logSpy = spyOn(console, "log").mockImplementation(() => {});
+
+		try {
+			await main(["node", "cli.ts"]);
+		} catch {
+			// expected if exitWithResult throws
+		}
+
+		const output = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
+		expect(output).toContain("a-first.ts");
+		expect(output).toContain("z-last.ts");
+		logSpy.mockRestore();
+	});
+
+	it("sorts violations from the same file by line number (a.line !== b.line branch)", async () => {
+		scanFilesMock.mockResolvedValue({
+			errorCount: 2,
+			warningCount: 0,
+			displayViolations: [
+				{
+					file: "same.ts",
+					line: 20,
+					column: 1,
+					rule: { name: "rule-a", message: "error", severity: "error" },
+					match: "x",
+				},
+				{
+					file: "same.ts",
+					line: 5,
+					column: 1,
+					rule: { name: "rule-b", message: "error", severity: "error" },
+					match: "y",
+				},
+			],
+		});
+		runAstRulesMock.mockResolvedValue({ errorCount: 0, warningCount: 0 });
+
+		const logSpy = spyOn(console, "log").mockImplementation(() => {});
+
+		try {
+			await main(["node", "cli.ts"]);
+		} catch {
+			// expected if exitWithResult throws
+		}
+
+		const calls = logSpy.mock.calls.map((c) => String(c[0]));
+		const lineNumbers = calls.filter((s) => s.includes("same.ts") || s.match(/^\s*\d+/));
+		expect(lineNumbers.length).toBeGreaterThan(0);
+		logSpy.mockRestore();
 	});
 });

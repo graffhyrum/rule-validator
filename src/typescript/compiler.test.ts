@@ -117,7 +117,9 @@ describe("compiler", () => {
 		});
 
 		it("constructorDeclaration: true for constructor member, false for MethodDeclaration", () => {
-			const classNode = firstStatement(parse("class Foo { constructor() {} m() {} }")) as ts.ClassDeclaration;
+			const classNode = firstStatement(
+				parse("class Foo { constructor() {} m() {} }"),
+			) as ts.ClassDeclaration;
 			const ctor = classNode.members[0];
 			const method = classNode.members[1];
 			assertDefined(ctor);
@@ -141,7 +143,10 @@ describe("compiler", () => {
 		});
 
 		it("typeReference: true for TypeReferenceNode, false for StringKeyword", () => {
-			const typeRef = findByKind(parse("const x: Foo = null as unknown;"), ts.SyntaxKind.TypeReference);
+			const typeRef = findByKind(
+				parse("const x: Foo = null as unknown;"),
+				ts.SyntaxKind.TypeReference,
+			);
 			const strKw = findByKind(parse("type T = string;"), ts.SyntaxKind.StringKeyword);
 			expect(is.typeReference(typeRef)).toBe(true);
 			expect(is.typeReference(strKw)).toBe(false);
@@ -207,7 +212,9 @@ describe("compiler", () => {
 		});
 
 		it("getAccessor: true for get accessor, false for set accessor", () => {
-			const classNode = firstStatement(parse("class Foo { get x() { return 1; } set x(v: number) {} }")) as ts.ClassDeclaration;
+			const classNode = firstStatement(
+				parse("class Foo { get x() { return 1; } set x(v: number) {} }"),
+			) as ts.ClassDeclaration;
 			const getter = classNode.members[0];
 			const setter = classNode.members[1];
 			assertDefined(getter);
@@ -217,7 +224,9 @@ describe("compiler", () => {
 		});
 
 		it("setAccessor: true for set accessor, false for get accessor", () => {
-			const classNode = firstStatement(parse("class Foo { get x() { return 1; } set x(v: number) {} }")) as ts.ClassDeclaration;
+			const classNode = firstStatement(
+				parse("class Foo { get x() { return 1; } set x(v: number) {} }"),
+			) as ts.ClassDeclaration;
 			const getter = classNode.members[0];
 			const setter = classNode.members[1];
 			assertDefined(getter);

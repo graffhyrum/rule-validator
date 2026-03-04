@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { Glob } from "bun";
-import { AST_RULES } from "./all-rules.js";
 import { RULES } from "../rules.js";
+import { AST_RULES } from "./all-rules.js";
 
 const INFRA_FILES = new Set(["index.ts", "rule.ts", "runner.ts", "registry.ts", "test-helpers.ts"]);
 describe("AST_RULES registration guard", () => {
@@ -46,9 +46,7 @@ function findSeverityMismatches(regexSeverity: Map<string, string>): string[] {
 	for (const astRule of AST_RULES) {
 		const regexSev = regexSeverity.get(astRule.name);
 		if (regexSev !== undefined && regexSev !== astRule.severity) {
-			mismatches.push(
-				`${astRule.name}: AST="${astRule.severity}" regex="${regexSev}"`,
-			);
+			mismatches.push(`${astRule.name}: AST="${astRule.severity}" regex="${regexSev}"`);
 		}
 	}
 	return mismatches;

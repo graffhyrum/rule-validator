@@ -1,8 +1,8 @@
 // Unit tests for deduplicateDisplayViolations and deduplicateJsonViolations.
 // Verifies key collision handling and regex-over-AST preference.
 import { describe, expect, it } from "bun:test";
-import type { DisplayViolation, JsonViolation } from "./index.ts";
 import { deduplicateDisplayViolations, deduplicateJsonViolations } from "./cli.ts";
+import type { DisplayViolation, JsonViolation } from "./index.ts";
 
 function makeDisplay(overrides: Partial<DisplayViolation> = {}): DisplayViolation {
 	return {

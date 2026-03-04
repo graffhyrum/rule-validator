@@ -89,3 +89,46 @@ Read all imported type files before designing loop structures involving context 
 ### Code quality gate
 Run `/simplify` before committing. The `PostToolUse` UBS hook catches security issues;
 `/simplify` catches redundancy and quality issues that static analysis misses.
+
+## Bun Test Isolation Rules
+
+Bun shares a single module cache across all test files in a run. `mock.module()` patches
+that shared cache, so a mock left open after one file completes will bleed into every
+subsequent file that imports the same path.
+
+### Rule 1 — always restore after mock.module
+
+Every test file that calls `mock.module()` must restore the cache in `afterAll`:
+
+```typescript
+import { mock, afterAll } from "bun:test";
+
+mock.module("./some-dependency.ts", () => ({ getValue: () => 42 }));
+
+afterAll(() => mock.restore());
+```
+
+Omitting `afterAll(() => mock.restore())` causes cross-file contamination whose
+symptom is a test that passes in isolation but fails (or vice-versa) when the full
+suite runs.
+
+### Rule 2 — use the `?fresh` pattern to access the real module from a mocked path
+
+Inside a file that has already called `mock.module("./foo.ts", ...)`, a normal
+`import` of `./foo.ts` returns the mock. To obtain the real (unmocked) module in the
+same file, append the `?fresh` query suffix to bust the cache:
+
+```typescript
+// The mock is in effect for the bare path:
+mock.module("./compiler.ts", () => ({ compile: mockCompile }));
+
+// Retrieve the real module via cache-busting import (type cast required because
+// Bun does not expose ?fresh in its TypeScript types):
+const real = await (import as (s: string) => Promise<unknown>)(
+  "./compiler.ts?fresh"
+);
+```
+
+The `as (s: string) => Promise<unknown>` cast is required because the TypeScript
+compiler rejects string expressions with query suffixes through the normal
+`import()` call signature. Cast the result to the expected module type before use.

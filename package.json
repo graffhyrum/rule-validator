@@ -20,7 +20,7 @@
 		"remove-buildinfo": "rm -rf tsconfig.types.tsbuildinfo",
 		"dev": "bun run src/cli.ts",
 		"test": "bun test",
-		"test:coverage": "AGENT=1 bun test --coverage ",
+		"test:coverage": "AGENT=1 bun run scripts/coverage-threshold.ts",
 		"typecheck": "tsc --noEmit",
 		"check": "biome check .",
 		"fix": "biome check --write .",
