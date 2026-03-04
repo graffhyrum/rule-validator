@@ -67,6 +67,55 @@ bun run validate "src/**/*.ts"
 | `no-expect-typeof-tobe` | error | Disallow `expect(typeof x).toBe(type)` - use TypeScript instead |
 | `no-toBeInstanceOf` | error | Disallow `toBeInstanceOf()` - use behavior-focused assertions |
 
+## Configuration
+
+Place a `rule-validator.config.json` file at your project root (or any ancestor directory — the tool walks up from the current working directory to find it).
+
+### Global Exclusions
+
+Patterns here are merged with the built-in defaults. Files matching any pattern are skipped entirely.
+
+```json
+{
+  "exclude": ["legacy/**", "src/generated/**"]
+}
+```
+
+### Per-Rule Exclusions
+
+Files matching a rule's `exclude` patterns are skipped only for that rule; other rules still apply.
+
+```json
+{
+  "rules": {
+    "no-non-null-assertion": {
+      "exclude": ["src/generated/**", "src/adapters/legacy/**"]
+    },
+    "no-static-classes": {
+      "exclude": ["src/infrastructure/**"]
+    }
+  }
+}
+```
+
+### Combined Example
+
+```json
+{
+  "exclude": ["legacy/**"],
+  "rules": {
+    "no-non-null-assertion": {
+      "exclude": ["src/generated/**"]
+    }
+  }
+}
+```
+
+**Notes:**
+- Global `exclude` appends to the built-in defaults; it cannot remove them.
+- If no config file is found, behavior is identical to current defaults (no regression).
+- A malformed or schema-invalid config produces a clear error and a non-zero exit.
+
 ## Programmatic API
 
 ```typescript
