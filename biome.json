@@ -14,7 +14,7 @@
 			"!build",
 			"!.idea",
 			"!public",
-			"!*.test.ts",
+			"!**/*.test.ts",
 			"!fixtures",
 			"!**/__fixtures__",
 			"!.mcp_data"

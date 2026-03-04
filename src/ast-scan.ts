@@ -6,13 +6,18 @@ import { createAnalyzer } from "./typescript/compiler.ts";
 
 export type { JsonViolation } from "./index.ts";
 
-export async function runAstRules(pattern: string, json?: boolean): Promise<ScanResult> {
-	const analyzer = await createAnalyzer({
-		pattern,
-		excludePatterns: ["**/__fixtures__/**", "**/*.test.ts", "**/*.test.tsx"],
-	});
+const DEFAULT_EXCLUDE_PATTERNS = ["**/__fixtures__/**", "**/*.test.ts", "**/*.test.tsx"] as const;
+
+export interface AstScanOptions {
+	json?: boolean;
+	excludePatterns?: readonly string[];
+}
+
+export async function runAstRules(pattern: string, options?: AstScanOptions): Promise<ScanResult> {
+	const excludePatterns = options?.excludePatterns ?? DEFAULT_EXCLUDE_PATTERNS;
+	const analyzer = await createAnalyzer({ pattern, excludePatterns: [...excludePatterns] });
 	const results: RuleResult[] = runRules({ analyzer, rules: AST_RULES });
-	return toScanResult(results, json);
+	return toScanResult(results, options?.json);
 }
 
 function toScanResult(results: RuleResult[], json?: boolean): ScanResult {

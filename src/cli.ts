@@ -22,7 +22,7 @@ export async function main(argv?: string[]): Promise<void> {
 	try {
 		const [regex, ast]: [ScanResult, ScanResult] = await Promise.all([
 			scanFiles(pattern, { json: opts.json }),
-			runAstRules(pattern, opts.json),
+			runAstRules(pattern, { json: opts.json }),
 		]);
 		const combined = deduplicateAndPrint(regex, ast, !opts.json);
 		if (opts.json) {
@@ -75,13 +75,13 @@ function deduplicateAndPrint(
 }
 
 function selectCounts(context: {
-	dedupedDisplay: unknown[];
-	dedupedJson: unknown[];
+	dedupedDisplay: DisplayViolation[];
+	dedupedJson: JsonViolation[];
 	regex: ScanResult;
 	ast: ScanResult;
 }): { errorCount: number; warningCount: number } {
-	if (context.dedupedDisplay.length > 0) return countFromDisplay(context.dedupedDisplay);
-	if (context.dedupedJson.length > 0) return countFromDisplay(context.dedupedJson);
+	if (context.dedupedDisplay.length > 0) return countFromDisplayViolations(context.dedupedDisplay);
+	if (context.dedupedJson.length > 0) return countFromJsonViolations(context.dedupedJson);
 	return {
 		errorCount: context.regex.errorCount + context.ast.errorCount,
 		warningCount: context.regex.warningCount + context.ast.warningCount,
@@ -105,8 +105,8 @@ export function deduplicateDisplayViolations(
 	return Array.from(deduped.values());
 }
 
-function printDedupedDisplay(violations: unknown[]): void {
-	const sorted = (violations as DisplayViolation[]).sort((a, b) => {
+function printDedupedDisplay(violations: DisplayViolation[]): void {
+	const sorted = violations.sort((a, b) => {
 		if (a.file !== b.file) return a.file.localeCompare(b.file);
 		if (a.line !== b.line) return a.line - b.line;
 		return a.column - b.column;
@@ -129,12 +129,27 @@ function printDedupedDisplay(violations: unknown[]): void {
 	}
 }
 
-function countFromDisplay(violations: unknown[]): { errorCount: number; warningCount: number } {
+function countFromDisplayViolations(violations: DisplayViolation[]): {
+	errorCount: number;
+	warningCount: number;
+} {
 	let errorCount = 0;
 	let warningCount = 0;
 	for (const v of violations) {
-		const vr = v as Record<string, unknown>;
-		if (vr.severity === "error") errorCount++;
+		if (v.rule.severity === "error") errorCount++;
+		else warningCount++;
+	}
+	return { errorCount, warningCount };
+}
+
+function countFromJsonViolations(violations: JsonViolation[]): {
+	errorCount: number;
+	warningCount: number;
+} {
+	let errorCount = 0;
+	let warningCount = 0;
+	for (const v of violations) {
+		if (v.severity === "error") errorCount++;
 		else warningCount++;
 	}
 	return { errorCount, warningCount };

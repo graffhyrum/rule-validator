@@ -31,6 +31,11 @@ export function exitWithResult(
 		process.exit(0);
 	}
 }
+export async function scanFiles(
+	pattern: string,
+	options: ScanOptions & { json: true },
+): Promise<ScanResult & { violations: JsonViolation[] }>;
+export async function scanFiles(pattern: string, options?: ScanOptions): Promise<ScanResult>;
 export async function scanFiles(pattern: string, options?: ScanOptions): Promise<ScanResult> {
 	const opts = applyScanDefaults(options);
 	let errorCount = 0;

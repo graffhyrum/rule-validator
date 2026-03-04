@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 
 const scanFilesMock = mock();
 const exitWithResultMock = mock();
@@ -14,6 +14,8 @@ mock.module("./ast-scan.ts", () => ({
 }));
 
 const { main } = await import("./cli.ts");
+
+afterAll(() => mock.restore());
 
 beforeEach(() => {
 	scanFilesMock.mockClear();
@@ -48,6 +50,35 @@ describe("CLI main function", () => {
 		await main(["node", "cli.ts"]);
 
 		expect(exitWithResultMock).toHaveBeenCalledWith(3, 3, 8);
+	});
+
+	it("should print display violations via printDedupedDisplay when present", async () => {
+		scanFilesMock.mockResolvedValue({
+			errorCount: 1,
+			warningCount: 0,
+			displayViolations: [
+				{
+					file: "src/foo.ts",
+					line: 10,
+					column: 5,
+					rule: { name: "test-rule", message: "test error", severity: "error" },
+					match: "badCode",
+				},
+			],
+		});
+
+		const logSpy = spyOn(console, "log").mockImplementation(() => {});
+
+		try {
+			await main(["node", "cli.ts"]);
+		} catch {
+			// expected if exitWithResult is not mocked to throw
+		}
+
+		const output = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
+		expect(output).toContain("src/foo.ts");
+		expect(exitWithResultMock).toHaveBeenCalledWith(1, 0, 0);
+		logSpy.mockRestore();
 	});
 
 	it("should handle error in scanFiles", async () => {

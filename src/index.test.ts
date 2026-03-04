@@ -1,5 +1,5 @@
-import { unlinkSync, writeFileSync } from "node:fs";
 import { afterAll, afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import { unlinkSync, writeFileSync } from "node:fs";
 
 // Mock RULES module
 const mockRules = [
@@ -26,11 +26,12 @@ afterAll(() => mock.restore());
 import {
 	checkLineForViolations,
 	countBySeverity,
+	exitWithResult,
+	type PrintableViolation,
 	printViolations,
 	scanFile,
 	scanFiles,
 	shouldProcessFile,
-	type PrintableViolation,
 	type Violation,
 } from "./index";
 
@@ -276,7 +277,7 @@ describe("scanFiles", () => {
 		try {
 			const result = await scanFiles(filename, { excludePatterns: [], json: true });
 			expect(Array.isArray(result.violations)).toBe(true);
-			expect(result.violations!.length).toBeGreaterThan(0);
+			expect(result.violations.length).toBeGreaterThan(0);
 		} finally {
 			unlinkSync(filename);
 		}
@@ -292,5 +293,65 @@ describe("scanFiles", () => {
 		} finally {
 			unlinkSync(filename);
 		}
+	});
+});
+
+describe("exitWithResult", () => {
+	it("exits 1 and prints error report when errorCount > 0", () => {
+		const exitSpy = spyOn(process, "exit").mockImplementation(() => {
+			throw new Error("exit 1");
+		});
+		const logSpy = spyOn(console, "log").mockImplementation(() => {});
+
+		try {
+			exitWithResult(2, 1);
+		} catch {
+			// expected: process.exit throws in test
+		}
+
+		expect(exitSpy).toHaveBeenCalledWith(1);
+		const output = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
+		expect(output).toContain("Fix errors before proceeding");
+		exitSpy.mockRestore();
+		logSpy.mockRestore();
+	});
+
+	it("exits 0 and prints warning report when only warnings", () => {
+		const exitSpy = spyOn(process, "exit").mockImplementation(() => {
+			throw new Error("exit 0");
+		});
+		const logSpy = spyOn(console, "log").mockImplementation(() => {});
+
+		try {
+			exitWithResult(0, 3);
+		} catch {
+			// expected
+		}
+
+		expect(exitSpy).toHaveBeenCalledWith(0);
+		const output = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
+		expect(output).toContain("Consider fixing warnings");
+		exitSpy.mockRestore();
+		logSpy.mockRestore();
+	});
+
+	it("exits 0 and prints success with file and rule counts when no violations", () => {
+		const exitSpy = spyOn(process, "exit").mockImplementation(() => {
+			throw new Error("exit 0");
+		});
+		const logSpy = spyOn(console, "log").mockImplementation(() => {});
+
+		try {
+			exitWithResult(0, 0, 5);
+		} catch {
+			// expected
+		}
+
+		expect(exitSpy).toHaveBeenCalledWith(0);
+		const output = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
+		expect(output).toContain("5 files passed");
+		expect(output).toContain("rules checked");
+		exitSpy.mockRestore();
+		logSpy.mockRestore();
 	});
 });
