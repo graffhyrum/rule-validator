@@ -2,6 +2,7 @@
 import path from "node:path";
 import { createCommand } from "commander";
 import { runAstRules } from "./ast-scan.ts";
+import { loadProjectConfig } from "./config.ts";
 import {
 	type DisplayViolation,
 	exitWithResult,
@@ -20,9 +21,10 @@ export async function main(argv?: string[]): Promise<void> {
 	const pattern: string = program.args[0] || DEFAULT_PATTERN;
 
 	try {
+		const config = await loadProjectConfig();
 		const [regex, ast]: [ScanResult, ScanResult] = await Promise.all([
-			scanFiles(pattern, { json: opts.json }),
-			runAstRules(pattern, { json: opts.json }),
+			scanFiles(pattern, { json: opts.json, config }),
+			runAstRules(pattern, { json: opts.json, config }),
 		]);
 		const combined = deduplicateAndPrint(regex, ast, !opts.json);
 		if (opts.json) {

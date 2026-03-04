@@ -1,6 +1,8 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { minimatch } from "minimatch";
 import pc from "picocolors";
+import type { ProjectConfig } from "./config.ts";
 import { RULES } from "./rules";
 
 export interface FileReader {
@@ -46,7 +48,7 @@ export async function scanFiles(pattern: string, options?: ScanOptions): Promise
 	for await (const file of fs.glob(pattern, { exclude: opts.excludePatterns })) {
 		if (!shouldProcessFile(file, opts.excludeName)) continue;
 		fileCount++;
-		const violations: Violation[] = await scanFile(file);
+		const violations: Violation[] = await scanFile(file, bunFileReader, opts.ruleExcludes);
 		if (violations.length === 0) continue;
 		const relFile = path.relative(process.cwd(), file);
 		const context = { violations, relFile, collected, displayViolations, json: opts.json };
@@ -87,6 +89,7 @@ function collectViolations(context: {
 export async function scanFile(
 	filePath: string,
 	fileReader: FileReader = bunFileReader,
+	ruleExcludes: Record<string, { exclude?: string[] }> = {},
 ): Promise<Violation[]> {
 	const violations: Violation[] = [];
 	const content: string = await fileReader.readFile(filePath);
@@ -101,13 +104,16 @@ export async function scanFile(
 			lineIndex,
 			filePath,
 			violations,
+			ruleExcludes,
 		});
 	}
 	return violations;
 }
 export function checkLineForViolations(params: CheckLineParams): void {
-	const { line, lineIndex, filePath, violations }: CheckLineParams = params;
+	const { line, lineIndex, filePath, violations, ruleExcludes = {} }: CheckLineParams = params;
+	const relPath = path.relative(process.cwd(), filePath);
 	for (const rule of RULES) {
+		if (isFileExcludedForRule(relPath, rule.name, ruleExcludes)) continue;
 		const matches: RegExpMatchArray[] = [...line.matchAll(rule.pattern)];
 		for (const match of matches) {
 			violations.push({
@@ -120,6 +126,16 @@ export function checkLineForViolations(params: CheckLineParams): void {
 			});
 		}
 	}
+}
+
+function isFileExcludedForRule(
+	relPath: string,
+	ruleName: string,
+	ruleExcludes: Record<string, { exclude?: string[] }>,
+): boolean {
+	const patterns = ruleExcludes[ruleName]?.exclude;
+	if (!patterns || patterns.length === 0) return false;
+	return patterns.some((pattern) => minimatch(relPath, pattern, { matchBase: false }));
 }
 export function shouldProcessFile(file: string, excludeName?: string): boolean {
 	const isValidExtension: boolean =
@@ -207,6 +223,7 @@ export interface CheckLineParams {
 	lineIndex: number;
 	filePath: string;
 	violations: Violation[];
+	ruleExcludes?: Record<string, { exclude?: string[] }>;
 }
 export interface JsonViolation {
 	file: string;
@@ -221,6 +238,7 @@ export interface ScanOptions {
 	excludePatterns?: readonly string[];
 	excludeName?: string;
 	json?: boolean;
+	config?: ProjectConfig;
 }
 export interface ScanResult {
 	errorCount: number;
@@ -247,10 +265,13 @@ const DEFAULT_EXCLUDE_PATTERNS: readonly string[] = [
 	"**/__fixtures__/**",
 ];
 function applyScanDefaults(options?: ScanOptions) {
+	const base = options?.excludePatterns ?? DEFAULT_EXCLUDE_PATTERNS;
+	const extra = options?.config?.exclude ?? [];
 	return {
-		excludePatterns: options?.excludePatterns ?? DEFAULT_EXCLUDE_PATTERNS,
+		excludePatterns: [...base, ...extra],
 		excludeName: options?.excludeName ?? "rule-validator",
 		json: options?.json,
+		ruleExcludes: options?.config?.rules ?? {},
 	};
 }
 

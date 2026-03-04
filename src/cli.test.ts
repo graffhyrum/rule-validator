@@ -17,6 +17,10 @@ mock.module("./ast-scan.ts", () => ({
 	runAstRules: runAstRulesMock,
 }));
 
+mock.module("./config.ts", () => ({
+	loadProjectConfig: mock(async () => ({})),
+}));
+
 const { main } = await import("./cli.ts");
 
 afterAll(() => mock.restore());
@@ -35,7 +39,7 @@ describe("CLI main function", () => {
 
 		await main(["node", "cli.ts"]);
 
-		expect(scanFilesMock).toHaveBeenCalledWith("**/*.{ts,tsx,js,jsx}", { json: undefined });
+		expect(scanFilesMock).toHaveBeenCalledWith("**/*.{ts,tsx,js,jsx}", { json: undefined, config: {} });
 		expect(exitWithResultMock).toHaveBeenCalledWith(0, 0, 0);
 	});
 
@@ -44,7 +48,7 @@ describe("CLI main function", () => {
 
 		await main(["node", "cli.ts", "src/**/*.ts"]);
 
-		expect(scanFilesMock).toHaveBeenCalledWith("src/**/*.ts", { json: undefined });
+		expect(scanFilesMock).toHaveBeenCalledWith("src/**/*.ts", { json: undefined, config: {} });
 		expect(exitWithResultMock).toHaveBeenCalledWith(1, 2, 0);
 	});
 
