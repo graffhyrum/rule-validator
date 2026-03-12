@@ -113,14 +113,7 @@ export async function scanFile(
 	return violations;
 }
 export function checkLineForViolations(params: CheckLineParams): void {
-	const {
-		line,
-		lineIndex,
-		filePath,
-		violations,
-		ruleExcludes = {},
-		fileSkippedRules,
-	}: CheckLineParams = params;
+	const { line, lineIndex, filePath, violations, ruleExcludes = {}, fileSkippedRules } = params;
 	const relPath = path.relative(process.cwd(), filePath);
 	for (const rule of RULES) {
 		if (fileSkippedRules?.has(rule.name)) continue;
@@ -204,8 +197,6 @@ export function printSummaryReport(errorCount: number, warningCount: number): vo
 		warningCount > 0 ? pc.yellow(`${warningCount} warnings`) : `${warningCount} warnings`;
 	console.log(`\n${pc.bold(`${total} violations`)} (${errors}, ${warnings})`);
 }
-// Rule Compliance Validator - Library
-// Scans code for violations of AGENTS.md rules
 export interface Rule {
 	name: string;
 	pattern: RegExp;

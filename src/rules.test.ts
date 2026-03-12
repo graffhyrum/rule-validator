@@ -3,20 +3,15 @@
 import { describe, expect, test } from "bun:test";
 import type { Rule } from "./index";
 
-// fileGuard inlined to avoid mock.module interception in the full suite
+// fileGuards inlined to avoid mock.module interception in the full suite
 const noRawResponseFileGuard = (content: string) => /from ['"]elysia['"]/.test(content);
+const noRawLocatorInSpecFileGuard = (content: string) => /test\.describe\s*\(/.test(content);
 
 const RULES: Rule[] = [
 	{
 		name: "no-waitForTimeout",
 		pattern: /\b\.waitForTimeout\s*\(/g,
 		message: "Unexpected static timeout.",
-		severity: "error",
-	},
-	{
-		name: "no-any-types",
-		pattern: /:\s*any\b/g,
-		message: "Unexpected `any` type.",
 		severity: "error",
 	},
 	{
@@ -55,6 +50,12 @@ const RULES: Rule[] = [
 		message: "Unexpected `new Response()`.",
 		severity: "warning",
 	},
+	{
+		name: "no-raw-locator-in-spec",
+		pattern: /\bpage\.locator\s*\(/g,
+		message: "Raw page.locator() in spec file.",
+		severity: "error",
+	},
 ];
 
 function matchesRule(ruleName: string, line: string): RegExpMatchArray[] {
@@ -72,22 +73,6 @@ describe("no-waitForTimeout", () => {
 
 	test("ignores word without dot prefix", () => {
 		expect(matchesRule(rule, "// waitForSelector is preferred")).toHaveLength(0);
-	});
-
-	test("severity is error", () => {
-		expect(RULES.find((r) => r.name === rule)?.severity).toBe("error");
-	});
-});
-
-describe("no-any-types", () => {
-	const rule = "no-any-types";
-
-	test("flags ': any' type annotation", () => {
-		expect(matchesRule(rule, "const x: any = {};")).toHaveLength(1);
-	});
-
-	test("ignores 'many' (any as substring, not a type)", () => {
-		expect(matchesRule(rule, "const many = 42;")).toHaveLength(0);
 	});
 
 	test("severity is error", () => {
@@ -166,8 +151,8 @@ describe("no-toBeInstanceOf", () => {
 		expect(matchesRule(rule, "expect(err).toBeInstanceOf(Error);")).toHaveLength(1);
 	});
 
-	test("ignores toBeInstanceOf in a comment (no dot prefix on this example)", () => {
-		expect(matchesRule(rule, "// use behavior assertions not instanceof")).toHaveLength(0);
+	test("ignores toBeInstanceOf without leading dot", () => {
+		expect(matchesRule(rule, "const toBeInstanceOf = noop;")).toHaveLength(0);
 	});
 
 	test("severity is error", () => {
@@ -196,5 +181,29 @@ describe("no-raw-response-in-elysia", () => {
 
 	test("fileGuard returns false when content has no elysia import", () => {
 		expect(noRawResponseFileGuard("const x = new Response(body);")).toBe(false);
+	});
+});
+
+describe("no-raw-locator-in-spec", () => {
+	const rule = "no-raw-locator-in-spec";
+
+	test("flags page.locator( in spec content", () => {
+		expect(matchesRule(rule, "const btn = page.locator('button');")).toHaveLength(1);
+	});
+
+	test("ignores page.getByRole( (POM-friendly locator)", () => {
+		expect(matchesRule(rule, "const btn = page.getByRole('button');")).toHaveLength(0);
+	});
+
+	test("severity is error", () => {
+		expect(RULES.find((r) => r.name === rule)?.severity).toBe("error");
+	});
+
+	test("fileGuard returns true when content contains test.describe", () => {
+		expect(noRawLocatorInSpecFileGuard("test.describe('suite', () => {")).toBe(true);
+	});
+
+	test("fileGuard returns false when content has no test.describe", () => {
+		expect(noRawLocatorInSpecFileGuard("export class MyPom {}")).toBe(false);
 	});
 });

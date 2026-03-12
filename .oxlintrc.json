@@ -1,9 +1,9 @@
 {
-	"plugins": null,
+	"plugins": [],
 	"rules": {
 		"no-void": "error",
 		"max-params": ["error", { "max": 3 }],
-		"no-unused-vars": ["warn", { "ignoreTypeValues": true }],
+		"no-unused-vars": "warn",
 		"typescript/no-non-null-assertion": "warn",
 		"prefer-template": "warn",
 		"eslint/no-nested-ternary": "error",
