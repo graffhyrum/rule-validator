@@ -35,36 +35,39 @@ User requested a random deep-dive exploration of the codebase to find bugs with 
 
 ## Key Decisions Made
 
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| Fix visitor by simplifying to single recursive `visit()` | Matches `traverseSourceFile` pattern already in codebase | Clean, correct, minimal |
-| Use glob's `ignore` option instead of fixing regex | Delegates to well-tested library; eliminates hand-rolled regex | Simpler, correct |
-| Keep `createVisitor` despite being unused | It's exported public API with tests; consumers may use it | Conservative, safe |
-| Skip extension list "duplication" finding | Lists serve different purposes (JS+TS vs TS-only) | Correct judgment |
+| Decision                                                 | Rationale                                                      | Outcome                 |
+| -------------------------------------------------------- | -------------------------------------------------------------- | ----------------------- |
+| Fix visitor by simplifying to single recursive `visit()` | Matches `traverseSourceFile` pattern already in codebase       | Clean, correct, minimal |
+| Use glob's `ignore` option instead of fixing regex       | Delegates to well-tested library; eliminates hand-rolled regex | Simpler, correct        |
+| Keep `createVisitor` despite being unused                | It's exported public API with tests; consumers may use it      | Conservative, safe      |
+| Skip extension list "duplication" finding                | Lists serve different purposes (JS+TS vs TS-only)              | Correct judgment        |
 
 ## Time Analysis
 
-| Phase | Estimated | Actual | Notes |
-|-------|-----------|--------|-------|
-| Codebase exploration | - | ~3 min | 3 rounds of parallel reads, 15+ files |
-| Bug identification | - | ~1 min | Found during reading, traced execution flows |
-| Bug fixes | - | ~2 min | 3 bugs + test updates |
-| Simplify review | - | ~2 min | 3 parallel Haiku agents |
-| Simplify fixes | - | ~1 min | 2 items fixed |
-| Verification | - | ~1 min | Tests + typecheck after each change |
+| Phase                | Estimated | Actual | Notes                                        |
+| -------------------- | --------- | ------ | -------------------------------------------- |
+| Codebase exploration | -         | ~3 min | 3 rounds of parallel reads, 15+ files        |
+| Bug identification   | -         | ~1 min | Found during reading, traced execution flows |
+| Bug fixes            | -         | ~2 min | 3 bugs + test updates                        |
+| Simplify review      | -         | ~2 min | 3 parallel Haiku agents                      |
+| Simplify fixes       | -         | ~1 min | 2 items fixed                                |
+| Verification         | -         | ~1 min | Tests + typecheck after each change          |
 
 ## Lessons Learned
 
 ### Applicable Everywhere
+
 - **Double-call bugs hide in orchestrator functions**: When function A calls function B, and B internally calls C, the caller of A might also call C directly — creating a double-call. This pattern is common in CLI entry points.
 - **Absolute vs relative path mismatch**: Any code that uses `{ absolute: true }` in glob but then filters with relative-path-anchored patterns will silently fail. Always test exclude logic with absolute paths.
 - **Visitor pattern correctness**: Tree visitors that mix explicit child handling with recursive `visit()` calls are prone to double-visiting. The simplest correct pattern is: `enter(node); forEachChild(node, visit); leave(node)`.
 
 ### Specific to This Work
+
 - The project has two parallel rule systems: regex-based (`src/rules.ts`) and AST-based (`src/rules/*.ts`). They share rule names but run independently via different code paths (`checkLineForViolations` vs `runRules`).
 - `VisitorOptions<T>` had a `context` field that was entirely dead — the context was passed as a function argument instead. Interface fields that duplicate function parameters are a smell.
 
 ### For Future Agents/Threads
+
 - **Recommend**: When fixing visitor/traversal bugs, count visits per node in tests to verify exactly-once semantics
 - **Suggest**: `/legacy` or `/seam` skills could help refactor `cli.test.ts` which duplicates production code
 - **Avoid**: Don't trust that glob exclude patterns work with absolute paths without testing
@@ -72,6 +75,7 @@ User requested a random deep-dive exploration of the codebase to find bugs with 
 ## Patterns for Reuse
 
 ### "Fresh Eyes" Bug Sweep Pattern
+
 1. Get full project tree structure
 2. Read ALL source files (not just the ones you think matter)
 3. Trace execution flows from entry points (CLI -> scanFiles -> checkLine -> RULES)
@@ -82,27 +86,34 @@ User requested a random deep-dive exploration of the codebase to find bugs with 
 ## Recommendations
 
 ### "If we could redo this thread..."
+
 - Load `/testing-patterns` skill before starting — would have prompted writing failing tests first
 - The exploration phase was efficient; no changes needed there
 
 ### Rule Change Proposals
+
 - Consider adding to `AGENTS.md`: "When fixing bugs, write a failing test first that demonstrates the bug before applying the fix"
 - Consider adding: "CLI test files should import and test actual production functions, not duplicate them with mocks"
 
 ### "Skills we should have loaded"
+
 - `/testing-patterns` — would have prompted red-green-refactor discipline
 - `/debug` — relevant for systematic bug finding, but keyword overlap with "explore and find bugs" is low
 - **Trigger improvement**: `/debug` skill description should include keywords like "find bugs", "code review", "fresh eyes", "audit"
 
 ### "Skills which didn't help"
+
 - No irrelevant skills were loaded. The `/simplify` skill was effective and well-triggered.
 
 ### "How can we make this work more deterministic?"
+
 - A pre-commit hook running `bun test && bun run typecheck` would catch regressions automatically
 - A custom `/audit` skill combining "explore + find bugs + simplify" would standardize this workflow
 
 ### Proposed workflows
+
 For "find and fix bugs" tasks:
+
 1. `mcp__contextplus__get_context_tree` for overview
 2. Parallel read of all source files (batch by dependency layers)
 3. Trace execution from entry points

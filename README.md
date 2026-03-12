@@ -18,12 +18,12 @@ bun add @graff/rule-validator
 Or link locally:
 
 ```bash # from this directory
-bun link 
+bun link
 ```
 
 ```bash # in target project
-bun link @graff/rule-validator 
-rule-validator 
+bun link @graff/rule-validator
+rule-validator
 ```
 
 ## CLI Usage
@@ -57,15 +57,15 @@ bun run validate "src/**/*.ts"
 
 ## Available Rules
 
-| Rule | Severity | Description |
-|------|----------|-------------|
-| `no-waitForTimeout` | error | Disallow Playwright's `waitForTimeout()` - use auto-waiting instead |
-| `no-any-types` | error | Disallow `any` type annotations |
-| `template-literals-only` | error | Require template literals instead of string concatenation |
-| `no-static-classes` | error | Disallow static-only class patterns (use module functions) |
-| `no-unknown-as-cast` | error | Disallow double casting through `unknown` (`as unknown as T`) |
-| `no-expect-typeof-tobe` | error | Disallow `expect(typeof x).toBe(type)` - use TypeScript instead |
-| `no-toBeInstanceOf` | error | Disallow `toBeInstanceOf()` - use behavior-focused assertions |
+| Rule                     | Severity | Description                                                         |
+| ------------------------ | -------- | ------------------------------------------------------------------- |
+| `no-waitForTimeout`      | error    | Disallow Playwright's `waitForTimeout()` - use auto-waiting instead |
+| `no-any-types`           | error    | Disallow `any` type annotations                                     |
+| `template-literals-only` | error    | Require template literals instead of string concatenation           |
+| `no-static-classes`      | error    | Disallow static-only class patterns (use module functions)          |
+| `no-unknown-as-cast`     | error    | Disallow double casting through `unknown` (`as unknown as T`)       |
+| `no-expect-typeof-tobe`  | error    | Disallow `expect(typeof x).toBe(type)` - use TypeScript instead     |
+| `no-toBeInstanceOf`      | error    | Disallow `toBeInstanceOf()` - use behavior-focused assertions       |
 
 ## Configuration
 
@@ -77,7 +77,7 @@ Patterns here are merged with the built-in defaults. Files matching any pattern 
 
 ```json
 {
-  "exclude": ["legacy/**", "src/generated/**"]
+	"exclude": ["legacy/**", "src/generated/**"]
 }
 ```
 
@@ -87,14 +87,14 @@ Files matching a rule's `exclude` patterns are skipped only for that rule; other
 
 ```json
 {
-  "rules": {
-    "no-non-null-assertion": {
-      "exclude": ["src/generated/**", "src/adapters/legacy/**"]
-    },
-    "no-static-classes": {
-      "exclude": ["src/infrastructure/**"]
-    }
-  }
+	"rules": {
+		"no-non-null-assertion": {
+			"exclude": ["src/generated/**", "src/adapters/legacy/**"]
+		},
+		"no-static-classes": {
+			"exclude": ["src/infrastructure/**"]
+		}
+	}
 }
 ```
 
@@ -102,16 +102,17 @@ Files matching a rule's `exclude` patterns are skipped only for that rule; other
 
 ```json
 {
-  "exclude": ["legacy/**"],
-  "rules": {
-    "no-non-null-assertion": {
-      "exclude": ["src/generated/**"]
-    }
-  }
+	"exclude": ["legacy/**"],
+	"rules": {
+		"no-non-null-assertion": {
+			"exclude": ["src/generated/**"]
+		}
+	}
 }
 ```
 
 **Notes:**
+
 - Global `exclude` appends to the built-in defaults; it cannot remove them.
 - If no config file is found, behavior is identical to current defaults (no regression).
 - A malformed or schema-invalid config produces a clear error and a non-zero exit.
@@ -169,12 +170,12 @@ Rules are defined in `src/rules.ts` with a pattern, message, and severity:
 
 ```typescript
 export const RULES: Rule[] = [
-  {
-    name: "my-custom-rule",
-    pattern: /myPattern/g,
-    message: "Description of the violation",
-    severity: "error", // or "warning"
-  },
+	{
+		name: "my-custom-rule",
+		pattern: /myPattern/g,
+		message: "Description of the violation",
+		severity: "error", // or "warning"
+	},
 ];
 ```
 

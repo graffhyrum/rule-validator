@@ -41,26 +41,26 @@ Cleared all 12 open beads issues in a single session covering CLI overhaul (comm
 
 ## Key Decisions Made
 
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| Use `commander` for CLI | Standard, well-tested, minimal API | Clean --help/--version/--json with 8 lines |
-| Batch output beads into one pass | All touch `printViolations` in `index.ts` | No merge conflicts, consistent style |
-| Inline AST integration (not subagent) | Touched `cli.ts` which was just modified by worktree | Avoided diff conflicts |
-| Extract `AST_RULES` to shared module | Duplicated in ast-scan.ts and integration.test.ts | Single source of truth |
-| Single-pass traversal refactor | 8 full AST walks per file → 1 | O(nodes) instead of O(rules × nodes) |
+| Decision                              | Rationale                                            | Outcome                                    |
+| ------------------------------------- | ---------------------------------------------------- | ------------------------------------------ |
+| Use `commander` for CLI               | Standard, well-tested, minimal API                   | Clean --help/--version/--json with 8 lines |
+| Batch output beads into one pass      | All touch `printViolations` in `index.ts`            | No merge conflicts, consistent style       |
+| Inline AST integration (not subagent) | Touched `cli.ts` which was just modified by worktree | Avoided diff conflicts                     |
+| Extract `AST_RULES` to shared module  | Duplicated in ast-scan.ts and integration.test.ts    | Single source of truth                     |
+| Single-pass traversal refactor        | 8 full AST walks per file → 1                        | O(nodes) instead of O(rules × nodes)       |
 
 ## Time Analysis
 
-| Phase | Estimated | Actual | Notes |
-|-------|-----------|--------|-------|
-| Triage + baseline | 10m | 10m | `bv --robot-triage` + `bun test` |
-| Parallel dispatch (2 beads) | 15m | 20m | Worktree merge friction |
-| AST integration (1 bead) | 15m | 20m | `createAnalyzer` filtering fix needed |
-| Output formatting (5 beads) | 20m | 15m | Batched effectively |
-| Remaining beads (4) | 15m | 15m | Straightforward |
-| Debug / fastvet fix | 20m | 30m | 17 TS errors + biome + self-scan false positives |
-| /simplify review | 15m | 20m | 3 agents + 8 fixes + re-verify |
-| **Total** | **~110m** | **~130m** | 85% accuracy |
+| Phase                       | Estimated | Actual    | Notes                                            |
+| --------------------------- | --------- | --------- | ------------------------------------------------ |
+| Triage + baseline           | 10m       | 10m       | `bv --robot-triage` + `bun test`                 |
+| Parallel dispatch (2 beads) | 15m       | 20m       | Worktree merge friction                          |
+| AST integration (1 bead)    | 15m       | 20m       | `createAnalyzer` filtering fix needed            |
+| Output formatting (5 beads) | 20m       | 15m       | Batched effectively                              |
+| Remaining beads (4)         | 15m       | 15m       | Straightforward                                  |
+| Debug / fastvet fix         | 20m       | 30m       | 17 TS errors + biome + self-scan false positives |
+| /simplify review            | 15m       | 20m       | 3 agents + 8 fixes + re-verify                   |
+| **Total**                   | **~110m** | **~130m** | 85% accuracy                                     |
 
 ## Lessons Learned
 
@@ -87,6 +87,7 @@ Cleared all 12 open beads issues in a single session covering CLI overhaul (comm
 ### Bead Batching by File Scope
 
 When multiple beads all modify the same file, batch them into a single editing pass:
+
 1. Read the file once
 2. Apply all changes in dependency order
 3. Run tests once after all changes
@@ -96,6 +97,7 @@ This avoids merge conflicts and reduces test iteration cycles.
 ### 3-Agent Simplify Review
 
 The reuse/quality/efficiency split produces complementary findings with minimal overlap:
+
 - Reuse agent finds duplicate logic and shared constants
 - Quality agent finds type system smells and abstraction leaks
 - Efficiency agent finds concurrency and traversal optimizations
@@ -133,6 +135,7 @@ Run this after any session that touches 5+ files.
 ### Proposed Workflows
 
 **Bead Sprint Workflow:**
+
 1. `bv --robot-triage` → identify batches by file scope
 2. `git stash` or commit any WIP
 3. Dispatch independent beads to worktree subagents

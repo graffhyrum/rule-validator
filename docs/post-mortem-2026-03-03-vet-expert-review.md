@@ -62,25 +62,25 @@ a Bun test isolation gap: `mock.module` leaks across files sharing the same proc
 
 ## Key Decisions Made 📌
 
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| Fix biome glob only, don't revert exclusion policy | 2/3 expert consensus that test exclusion is correct; only 1 genuine false positive | Correct; kept linting clean |
-| Implement `countFromDisplay` at 1/3 consensus | Craftsman provided specific code evidence; bug was provably real | Fixed real production bug |
-| Use `?fresh` cache-busting import | `mock.restore()` alone didn't clear Bun's module cache; fresh import worked empirically | All 172 tests pass |
-| Add `afterAll(() => mock.restore())` to `cli.test.ts` | Defense-in-depth against future file ordering changes | Forward-compatible |
-| Keep `runAstRules` tests in `ast-scan.test.ts` | Preserves semantic co-location; workaround is documented | Clean architecture |
+| Decision                                              | Rationale                                                                               | Outcome                     |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------- | --------------------------- |
+| Fix biome glob only, don't revert exclusion policy    | 2/3 expert consensus that test exclusion is correct; only 1 genuine false positive      | Correct; kept linting clean |
+| Implement `countFromDisplay` at 1/3 consensus         | Craftsman provided specific code evidence; bug was provably real                        | Fixed real production bug   |
+| Use `?fresh` cache-busting import                     | `mock.restore()` alone didn't clear Bun's module cache; fresh import worked empirically | All 172 tests pass          |
+| Add `afterAll(() => mock.restore())` to `cli.test.ts` | Defense-in-depth against future file ordering changes                                   | Forward-compatible          |
+| Keep `runAstRules` tests in `ast-scan.test.ts`        | Preserves semantic co-location; workaround is documented                                | Clean architecture          |
 
 ## Time Analysis
 
-| Phase | Estimated | Actual | Notes |
-|-------|-----------|--------|-------|
-| Biome glob diagnosis + fix | 5m | 5m | Perfect: ran vet, read output, traced root cause, one edit |
-| Expert review (3 agents) | 3m | ~4m | Agents ran in parallel; synthesis was the main cost |
-| Implementation setup (beads) | 2m | 2m | 4 beads created in parallel |
-| Production code changes | 10m | 10m | 5 changes across 3 files, typecheck on first pass except readonly spread |
-| Test writing | 10m | 10m | New tests for runAstRules, exitWithResult, printDedupedDisplay |
-| Bun mock isolation debugging | 5m | ~20m | Unexpected; required 8+ iterations and empirical proof |
-| Final vet + commit + push | 5m | 5m | Clean on first run |
+| Phase                        | Estimated | Actual | Notes                                                                    |
+| ---------------------------- | --------- | ------ | ------------------------------------------------------------------------ |
+| Biome glob diagnosis + fix   | 5m        | 5m     | Perfect: ran vet, read output, traced root cause, one edit               |
+| Expert review (3 agents)     | 3m        | ~4m    | Agents ran in parallel; synthesis was the main cost                      |
+| Implementation setup (beads) | 2m        | 2m     | 4 beads created in parallel                                              |
+| Production code changes      | 10m       | 10m    | 5 changes across 3 files, typecheck on first pass except readonly spread |
+| Test writing                 | 10m       | 10m    | New tests for runAstRules, exitWithResult, printDedupedDisplay           |
+| Bun mock isolation debugging | 5m        | ~20m   | Unexpected; required 8+ iterations and empirical proof                   |
+| Final vet + commit + push    | 5m        | 5m     | Clean on first run                                                       |
 
 ## Lessons Learned 🎓
 

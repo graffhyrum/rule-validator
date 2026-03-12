@@ -23,7 +23,7 @@ The `/simplify` pass caught and removed it. All 59 tests passed throughout.
    independently identified the duplicate `rule` key in `pairs`. The simplify
    pass converted a slightly worse solution into the best one.
 4. **Bead lifecycle respected** — `bd update in_progress` → implement → `bd
-   close` → commit → `bd sync` → push; no steps skipped.
+close` → commit → `bd sync` → push; no steps skipped.
 5. **Epic auto-closed** — recognized that rule-validator-psr was now fully
    satisfied and closed it without prompting.
 
@@ -50,21 +50,21 @@ The `/simplify` pass caught and removed it. All 59 tests passed throughout.
 
 ## Key Decisions Made 📌
 
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| Use `Edit` (not `Write`) for runner.ts | File >50 lines, targeted replacement safer | No imports dropped, clean diff |
-| Close rule-validator-psr without extra work | All 29 sub-beads closed; epic was wrapper only | Correct; project board now clean |
-| Fix redundancy post-simplify rather than defend `pairs` | Two agents agreed independently | Cleaner, smaller code |
+| Decision                                                | Rationale                                      | Outcome                          |
+| ------------------------------------------------------- | ---------------------------------------------- | -------------------------------- |
+| Use `Edit` (not `Write`) for runner.ts                  | File >50 lines, targeted replacement safer     | No imports dropped, clean diff   |
+| Close rule-validator-psr without extra work             | All 29 sub-beads closed; epic was wrapper only | Correct; project board now clean |
+| Fix redundancy post-simplify rather than defend `pairs` | Two agents agreed independently                | Cleaner, smaller code            |
 
 ## Time Analysis
 
-| Phase | Notes |
-|-------|-------|
-| Triage / bead review | Parallel fetch of bead details + baseline test |
-| Implementation | 3 Edit calls, ~2 min |
-| Verification | `bun test` — 59 pass |
-| Commit + push | Blocked once by unstaged beads; resolved with second `bd sync` |
-| Simplify | 3 parallel agents; identified redundancy; 1 Edit fix; re-test; commit |
+| Phase                | Notes                                                                 |
+| -------------------- | --------------------------------------------------------------------- |
+| Triage / bead review | Parallel fetch of bead details + baseline test                        |
+| Implementation       | 3 Edit calls, ~2 min                                                  |
+| Verification         | `bun test` — 59 pass                                                  |
+| Commit + push        | Blocked once by unstaged beads; resolved with second `bd sync`        |
+| Simplify             | 3 parallel agents; identified redundancy; 1 Edit fix; re-test; commit |
 
 ## Lessons Learned 🎓
 
@@ -86,7 +86,7 @@ The `/simplify` pass caught and removed it. All 59 tests passed throughout.
 
 ### For Future Agents/Threads
 
-- **Recommend**: Read both the file being changed *and* the types it depends on
+- **Recommend**: Read both the file being changed _and_ the types it depends on
   (rule.ts) before designing the data structure for the iteration.
 - **Suggest**: Load `typescript` skill for type-safety patterns on TypeScript
   refactors; it would surface the "no redundant state" principle earlier.
@@ -101,12 +101,16 @@ subject via the context — don't zip them into a separate pair.
 
 ```typescript
 // Anti-pattern: redundant pairing
-const pairs = rules.map(rule => ({ rule, ctx: createCtx(rule) }));
-for (const { rule, ctx } of pairs) { rule.visit(ctx, node); }
+const pairs = rules.map((rule) => ({ rule, ctx: createCtx(rule) }));
+for (const { rule, ctx } of pairs) {
+	rule.visit(ctx, node);
+}
 
 // Better: context carries the rule
-const contexts = rules.map(rule => createCtx(rule));
-for (const ctx of contexts) { ctx.rule.visit(ctx, node); }
+const contexts = rules.map((rule) => createCtx(rule));
+for (const ctx of contexts) {
+	ctx.rule.visit(ctx, node);
+}
 ```
 
 Applicable whenever a factory function embeds its input into the returned object.
@@ -122,9 +126,9 @@ Applicable whenever a factory function embeds its input into the returned object
 
 ### Rule Change Proposals
 
-- Add to project `AGENTS.md`: *"Before creating zip/pair structures in
+- Add to project `AGENTS.md`: _"Before creating zip/pair structures in
   runner.ts or similar visitor loops, verify the context type does not already
-  carry a reference to the paired subject."*
+  carry a reference to the paired subject."_
 
 ### Skills we should have loaded
 
@@ -168,11 +172,11 @@ Applicable whenever a factory function embeds its input into the returned object
 ## Follow-up Actions
 
 - [ ] Consider adding "read imported type files before designing loop
-  structures" to `AGENTS.md` or a project rule
+      structures" to `AGENTS.md` or a project rule
 - [ ] Evaluate making `/simplify` a mandatory pre-commit gate (hook or
-  checklist entry)
+      checklist entry)
 - [ ] Update `typescript` skill description to include "eliminate as casts"
-  as a trigger keyword
+      as a trigger keyword
 
 ## Related Threads
 
