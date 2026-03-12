@@ -44,4 +44,9 @@ function instanceTests(result: { message: string }) {
 	expect(result.message).toBe("error occurred");
 }
 
-export { processData, element, count, Counter, greeting, waitExample, typeTests, instanceTests };
+// Numeric variable addition — must NOT trigger template-literals-only
+const errorCount = 3;
+const warningCount = 2;
+const totalCount = errorCount + warningCount;
+
+export { processData, element, count, Counter, greeting, waitExample, typeTests, instanceTests, totalCount };

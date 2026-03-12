@@ -58,6 +58,12 @@ const RULES: Rule[] = [
 	},
 ];
 
+// SYNC CHECK: inline count must equal the number of rules in src/rules.ts.
+// When adding a rule there, add it here too, then update the count below.
+test("RULES.length matches src/rules.ts (update both when adding rules)", () => {
+	expect(RULES.length).toBe(8);
+});
+
 function matchesRule(ruleName: string, line: string): RegExpMatchArray[] {
 	const rule = RULES.find((r) => r.name === ruleName);
 	if (!rule) throw new Error(`Rule not found: ${ruleName}`);
