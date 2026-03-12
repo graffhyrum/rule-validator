@@ -104,6 +104,8 @@ Read all imported type files before designing loop structures involving context 
 
 ### Code quality gate
 
+Run `bun fastvet` (build + typecheck + lint + test) before closing any bead or declaring done.
+`bun test` alone does not catch TypeScript errors or lint violations.
 Run `/simplify` before committing. The `PostToolUse` UBS hook catches security issues;
 `/simplify` catches redundancy and quality issues that static analysis misses.
 
@@ -149,3 +151,19 @@ const real = await (import as (s: string) => Promise<unknown>)(
 The `as (s: string) => Promise<unknown>` cast is required because the TypeScript
 compiler rejects string expressions with query suffixes through the normal
 `import()` call signature. Cast the result to the expected module type before use.
+
+### Rule 3 — assert before restore
+
+Spy assertions must come **before** `mock.restore()`. Restore clears call history:
+
+```typescript
+// ✅ assert first, then restore
+expect(spy).toHaveBeenCalledWith(expectedArg);
+mock.restore();
+
+// ❌ spy history is empty after restore — assertion is a no-op
+mock.restore();
+expect(spy).toHaveBeenCalledWith(expectedArg);
+```
+
+Never place spy assertions in `finally` blocks that also call `mock.restore()`.
