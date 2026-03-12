@@ -48,5 +48,14 @@ export const RULES: Rule[] = [
 		message:
 			"Unexpected `new Response()`. Use set.status, set.headers, and redirect() in Elysia handlers.",
 		severity: "warning",
+		fileGuard: (content: string) => /from ['"]elysia['"]/.test(content),
+	},
+	{
+		name: "no-raw-locator-in-spec",
+		// page.locator() is valid in POMs; fileGuard limits this to spec files (test.describe is the discriminator)
+		pattern: /\bpage\.locator\s*\(/g,
+		message: "Raw page.locator() in spec file. Encapsulate in a POM method instead.",
+		severity: "error",
+		fileGuard: (content: string) => /test\.describe\s*\(/.test(content),
 	},
 ];

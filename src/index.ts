@@ -93,6 +93,9 @@ export async function scanFile(
 	const violations: Violation[] = [];
 	const content: string = await fileReader.readFile(filePath);
 	const lines: string[] = content.split("\n");
+	const fileSkippedRules = new Set(
+		RULES.filter((r) => r.fileGuard && !r.fileGuard(content)).map((r) => r.name),
+	);
 	for (let lineIndex: number = 0; lineIndex < lines.length; lineIndex++) {
 		const line = lines[lineIndex];
 		if (!line) {
@@ -104,14 +107,23 @@ export async function scanFile(
 			filePath,
 			violations,
 			ruleExcludes,
+			fileSkippedRules,
 		});
 	}
 	return violations;
 }
 export function checkLineForViolations(params: CheckLineParams): void {
-	const { line, lineIndex, filePath, violations, ruleExcludes = {} }: CheckLineParams = params;
+	const {
+		line,
+		lineIndex,
+		filePath,
+		violations,
+		ruleExcludes = {},
+		fileSkippedRules,
+	}: CheckLineParams = params;
 	const relPath = path.relative(process.cwd(), filePath);
 	for (const rule of RULES) {
+		if (fileSkippedRules?.has(rule.name)) continue;
 		if (isFileExcludedForRule(relPath, rule.name, ruleExcludes)) continue;
 		const matches: RegExpMatchArray[] = [...line.matchAll(rule.pattern)];
 		for (const match of matches) {
@@ -199,6 +211,7 @@ export interface Rule {
 	pattern: RegExp;
 	message: string;
 	severity: "error" | "warning";
+	fileGuard?: (content: string) => boolean;
 }
 export interface Violation {
 	file: string;
@@ -214,6 +227,7 @@ export interface CheckLineParams {
 	filePath: string;
 	violations: Violation[];
 	ruleExcludes?: Record<string, { exclude?: string[] }>;
+	fileSkippedRules?: Set<string>;
 }
 export interface JsonViolation {
 	file: string;

@@ -15,8 +15,4 @@ export {
 	type RuleModule,
 	type RuleViolation,
 } from "./rule.js";
-export {
-	type FoundViolation,
-	type RuleResult,
-	runRules,
-} from "./runner.js";
+export { type FoundViolation, type RuleResult, runRules } from "./runner.js";

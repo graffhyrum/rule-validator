@@ -3,6 +3,9 @@
 import { describe, expect, test } from "bun:test";
 import type { Rule } from "./index";
 
+// fileGuard inlined to avoid mock.module interception in the full suite
+const noRawResponseFileGuard = (content: string) => /from ['"]elysia['"]/.test(content);
+
 const RULES: Rule[] = [
 	{
 		name: "no-waitForTimeout",
@@ -185,5 +188,13 @@ describe("no-raw-response-in-elysia", () => {
 
 	test("severity is warning", () => {
 		expect(RULES.find((r) => r.name === rule)?.severity).toBe("warning");
+	});
+
+	test("fileGuard returns true when content imports from elysia", () => {
+		expect(noRawResponseFileGuard('import { Elysia } from "elysia"')).toBe(true);
+	});
+
+	test("fileGuard returns false when content has no elysia import", () => {
+		expect(noRawResponseFileGuard("const x = new Response(body);")).toBe(false);
 	});
 });
