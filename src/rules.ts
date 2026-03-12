@@ -36,7 +36,7 @@ export const RULES: Rule[] = [
 	},
 	{
 		name: "no-toBeInstanceOf",
-		pattern: /\.toBeInstanceOf\s*\(/g,
+		pattern: /\.toBeInstanceOf\s*\((?!ArkErrors)/g,
 		message:
 			"Unexpected `toBeInstanceOf()`. Use behavior-focused assertions instead of checking constructor types.",
 		severity: "error",

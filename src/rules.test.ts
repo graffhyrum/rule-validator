@@ -40,7 +40,7 @@ const RULES: Rule[] = [
 	},
 	{
 		name: "no-toBeInstanceOf",
-		pattern: /\.toBeInstanceOf\s*\(/g,
+		pattern: /\.toBeInstanceOf\s*\((?!ArkErrors)/g,
 		message: "Unexpected `toBeInstanceOf()`.",
 		severity: "error",
 	},
@@ -159,6 +159,10 @@ describe("no-toBeInstanceOf", () => {
 
 	test("ignores toBeInstanceOf without leading dot", () => {
 		expect(matchesRule(rule, "const toBeInstanceOf = noop;")).toHaveLength(0);
+	});
+
+	test("allows toBeInstanceOf(ArkErrors)", () => {
+		expect(matchesRule(rule, "expect(err).toBeInstanceOf(ArkErrors);")).toHaveLength(0);
 	});
 
 	test("severity is error", () => {
