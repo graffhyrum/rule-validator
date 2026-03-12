@@ -1,0 +1,27 @@
+{
+	"plugins": null,
+	"rules": {
+		"no-void": "error",
+		"max-params": ["error", { "max": 3 }],
+		"no-unused-vars": ["warn", { "ignoreTypeValues": true }],
+		"typescript/no-non-null-assertion": "warn",
+		"prefer-template": "warn",
+		"eslint/no-nested-ternary": "error",
+		"no-else-return": "error",
+		"yoda": "error",
+		"typescript/prefer-for-of": "error",
+		"typescript/no-explicit-any": "warn",
+		"no-var": "error"
+	},
+	"ignorePatterns": [
+		"node_modules",
+		"dist",
+		"build",
+		".idea",
+		"public",
+		"**/*.test.ts",
+		"fixtures",
+		"**/__fixtures__",
+		".mcp_data"
+	]
+}

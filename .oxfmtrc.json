@@ -1,0 +1,25 @@
+{
+	"useTabs": true,
+	"tabWidth": 2,
+	"printWidth": 100,
+	"singleQuote": false,
+	"jsxSingleQuote": false,
+	"quoteProps": "as-needed",
+	"trailingComma": "all",
+	"semi": true,
+	"arrowParens": "always",
+	"bracketSameLine": false,
+	"bracketSpacing": true,
+	"singleAttributePerLine": false,
+	"ignorePatterns": [
+		"node_modules",
+		"dist",
+		"build",
+		".idea",
+		"public",
+		"**/*.test.ts",
+		"fixtures",
+		"**/__fixtures__",
+		".mcp_data"
+	]
+}
