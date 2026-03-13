@@ -1,6 +1,5 @@
 import * as ts from "typescript";
-import type { ASTRule, RuleContext } from "../rules/index.js";
-import { createViolation } from "../rules/index.js";
+import { createViolation, type ASTRule, type RuleContext } from "./rule.js";
 import { is } from "../typescript/index.js";
 
 const MESSAGE = "Use template literals instead of string concatenation.";
