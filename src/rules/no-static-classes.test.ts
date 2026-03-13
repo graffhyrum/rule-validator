@@ -112,6 +112,19 @@ describe("no-static-classes rule", () => {
 		expect(testFileResults[0]?.violations.length).toBe(1);
 	});
 
+	it("should not flag an anonymous default-exported class with only static members", () => {
+		const analyzer = createTestSourceFile(`
+			export default class {
+				static helper(): string {
+					return "help";
+				}
+			}
+		`);
+		const results = runRules({ analyzer, rules: [noStaticClassesRule] });
+		const testFileResults = results.filter((r) => r.file === "test.ts");
+		expect(testFileResults.length).toBe(0);
+	});
+
 	it("should not flag a class with all static members plus one instance method", () => {
 		const analyzer = createTestSourceFile(`
 			class Hybrid {

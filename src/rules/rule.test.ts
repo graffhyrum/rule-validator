@@ -26,7 +26,7 @@ describe("createViolation", () => {
 		expect(spy).toHaveBeenCalledWith({ node, message: "variable is unused" });
 	});
 
-	it("forwards varied message strings unchanged", () => {
+	it("preserves special characters in violation messages", () => {
 		const messages = [
 			"Expected `const` but found `let`",
 			"",
@@ -42,14 +42,17 @@ describe("createViolation", () => {
 		}
 	});
 
-	it("calls addViolation exactly once per createViolation invocation", () => {
-		const spy = mock(() => {});
+	it("produces one violation per call with distinct messages", () => {
+		const calls: Array<{ node: ts.Node; message: string }> = [];
 		const node = {} as ts.Node;
-		const ctx = makeContext(spy);
+		const ctx = makeContext((v) => calls.push(v));
 
 		createViolation(ctx, node, "first");
 		createViolation(ctx, node, "second");
 
-		expect(spy).toHaveBeenCalledTimes(2);
+		expect(calls).toEqual([
+			{ node, message: "first" },
+			{ node, message: "second" },
+		]);
 	});
 });
