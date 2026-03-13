@@ -10,7 +10,7 @@ export const RULES: Rule[] = [
 	},
 	{
 		name: "template-literals-only",
-		pattern: /"\s*\+\s*"|"\S+"\s*\+\s*\S+(?!\s*\))|\S+\s*\+\s*"(?!\s*\))/g,
+		pattern: /"\s*\+\s*"|"\S+"\s*\+\s*\S+(?!\s*\))|\S+\s*\+\s*"[^"]*"(?!\s*\))/g,
 		message: "Use template literals instead of string concatenation.",
 		severity: "error",
 	},

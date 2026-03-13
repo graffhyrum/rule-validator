@@ -16,7 +16,7 @@ const RULES: Rule[] = [
 	},
 	{
 		name: "template-literals-only",
-		pattern: /"\s*\+\s*"|"\S+"\s*\+\s*\S+(?!\s*\))|\S+\s*\+\s*"(?!\s*\))/g,
+		pattern: /"\s*\+\s*"|"\S+"\s*\+\s*\S+(?!\s*\))|\S+\s*\+\s*"[^"]*"(?!\s*\))/g,
 		message: "Use template literals instead of string concatenation.",
 		severity: "error",
 	},
@@ -95,6 +95,19 @@ describe("template-literals-only", () => {
 
 	test("ignores numeric addition", () => {
 		expect(matchesRule(rule, "const n = 1 + 2;")).toHaveLength(0);
+	});
+
+	test("flags variable + string concatenation", () => {
+		expect(matchesRule(rule, 'const s = name + " is great";')).toHaveLength(1);
+	});
+
+	test("ignores plus sign inside a string literal (SRI hash)", () => {
+		expect(
+			matchesRule(
+				rule,
+				'  "sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+";',
+			),
+		).toHaveLength(0);
 	});
 
 	test("severity is error", () => {
