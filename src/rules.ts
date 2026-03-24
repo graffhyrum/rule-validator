@@ -5,7 +5,7 @@ export const RULES: Rule[] = [
 		name: "no-waitForTimeout",
 		pattern: /\b\.waitForTimeout\s*\(/g,
 		message:
-			"Unexpected static timeout. Use Playwright auto-waiting or web-first assertions instead.",
+			"Unexpected static timeout. Use Playwright auto-waiting or web-first assertions instead. See https://playwright.dev/docs/api/class-page#page-wait-for-timeout",
 		severity: "error",
 	},
 	{
