@@ -2,6 +2,7 @@
 	"name": "@graff/rule-validator",
 	"version": "0.0.1",
 	"private": true,
+	"license": "MIT",
 	"bin": {
 		"rule-validator": "./dist/cli.js"
 	},
@@ -14,14 +15,14 @@
 	},
 	"scripts": {
 		"build": "bun scripts/build.ts && bun run build:declaration",
-		"build:declaration": "tsc --emitDeclarationOnly --project tsconfig.types.json",
+		"build:declaration": "tsgo --emitDeclarationOnly --project tsconfig.types.json",
 		"postbuild": "bun run --shell bun remove-buildinfo",
 		"validate": "bun run src/cli.ts",
 		"remove-buildinfo": "rm -rf tsconfig.types.tsbuildinfo",
 		"dev": "bun run src/cli.ts",
 		"test": "bun test",
 		"test:coverage": "AGENT=1 bun run scripts/coverage-threshold.ts",
-		"typecheck": "tsc --noEmit",
+		"typecheck": "tsgo --noEmit",
 		"check": "bunx oxlint . && bunx oxfmt --check .",
 		"fix": "bunx oxlint --fix . && bunx oxfmt .",
 		"custom-hooks": "stepdown-rule analyze && bun run src/cli.ts",

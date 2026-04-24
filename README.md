@@ -183,4 +183,4 @@ For AST-based rules, see `src/rules/no-any-types.ts` as an example.
 
 ## License
 
-Private package.
+[MIT](LICENSE).

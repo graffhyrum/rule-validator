@@ -42,6 +42,9 @@ telemetry-id
 .bv/
 .claude/
 
+# beads issue DB / exports (PII); not shipped in public repo
+.beads/
+
 # Dolt database files (added by bd init)
 .dolt/
 *.db
