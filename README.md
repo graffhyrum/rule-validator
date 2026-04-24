@@ -1,4 +1,4 @@
-# @graff/rule-validator
+# rule-validator
 
 A CLI tool and library for validating code against custom linting rules. Scans TypeScript and JavaScript files for violations and reports errors/warnings.
 
