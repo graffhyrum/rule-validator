@@ -4,24 +4,24 @@ A CLI tool and library for validating code against custom linting rules. Scans T
 
 ## Installation
 
-```bash
+```shell
 bun install
 bun run build
 ```
 
 Or install as a dependency:
 
-```bash
+```shell
 bun add @graff/rule-validator
 ```
 
 Or link locally:
 
-```bash # from this directory
+```shell # from this directory
 bun link
 ```
 
-```bash # in target project
+```shell # in target project
 bun link @graff/rule-validator
 rule-validator
 ```
@@ -32,13 +32,13 @@ rule-validator
 
 Scan all TypeScript/JavaScript files in the current directory:
 
-```bash
+```shell
 bun run validate
 ```
 
 Or run directly:
 
-```bash
+```shell
 bun run src/cli.ts
 ```
 
@@ -46,7 +46,7 @@ bun run src/cli.ts
 
 Specify a glob pattern to scan specific files:
 
-```bash
+```shell
 bun run validate "src/**/*.ts"
 ```
 
@@ -152,9 +152,11 @@ Array of all registered rules with their patterns and messages.
 
 ## Development
 
+Scripts use Bun (`bun run …`). Invoke them via Bun, not raw npm/cmd.
+
 ### Scripts
 
-```bash
+```shell
 bun run build        # Build the project
 bun run test         # Run tests
 bun run test:coverage # Run tests with coverage

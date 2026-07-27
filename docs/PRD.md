@@ -202,7 +202,7 @@ interface RuleContext {
 
 ### CLI Interface (保持兼容)
 
-```bash
+```shell
 # Same as before
 rule-validator "src/**/*.ts"
 rule-validator --fix "src/**/*.ts"
