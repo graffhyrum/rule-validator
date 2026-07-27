@@ -53,10 +53,7 @@ async function createFixtureAnalyzer(filename: string): Promise<AnalyzerContext>
 	const fixturePath = path.join(import.meta.dir, "__fixtures__", filename);
 	const content = await Bun.file(fixturePath).text();
 	const sourceFile = ts.createSourceFile(fixturePath, content, ts.ScriptTarget.Latest, true);
-	const sourceFiles = new Map<string, ts.SourceFile>([[fixturePath, sourceFile]]);
 	return {
-		program: {} as ts.Program,
-		checker: {} as ts.TypeChecker,
-		sourceFiles,
+		sourceFiles: new Map<string, ts.SourceFile>([[fixturePath, sourceFile]]),
 	};
 }

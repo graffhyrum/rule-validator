@@ -1,12 +1,13 @@
 // Runs bun test --coverage and fails if any per-file function coverage drops below THRESHOLD.
 // Exit 1 on threshold violation; exit 2 on test suite failure.
+import { toPosixPath } from "../src/paths.ts";
 
 const THRESHOLD = 90;
 
 const proc = Bun.spawn(["bun", "test", "--coverage"], {
 	stdout: "pipe",
 	stderr: "inherit",
-	env: { ...process.env },
+	env: { ...process.env, AGENT: "1" },
 });
 
 const raw = await new Response(proc.stdout).text();
@@ -27,14 +28,15 @@ function collectFailures(output: string): string[] {
 	return output
 		.split("\n")
 		.flatMap((line) => parseLine(line))
-		.filter((f) => f !== null) as string[];
+		.filter((f): f is string => f !== null);
 }
 
 function parseLine(line: string): string | null {
-	const match = line.match(/^\s+(src\/\S+)\s+\|\s+([\d.]+)\s+\|/);
+	const match = line.match(/^\s+(src[/\\]\S+)\s+\|\s+([\d.]+)\s+\|/);
 	if (!match || match[1] === undefined || match[2] === undefined) return null;
 	const pct = Number.parseFloat(match[2]);
-	if (pct < THRESHOLD) return `${match[1]}: ${pct}% functions (threshold: ${THRESHOLD}%)`;
+	const file = toPosixPath(match[1]);
+	if (pct < THRESHOLD) return `${file}: ${pct}% functions (threshold: ${THRESHOLD}%)`;
 	return null;
 }
 

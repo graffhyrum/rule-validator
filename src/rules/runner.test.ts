@@ -1,5 +1,7 @@
 import { describe, expect, it } from "bun:test";
+import path from "node:path";
 import * as ts from "typescript";
+import { asRelativePosix } from "../paths.ts";
 import type { AnalyzerContext } from "../typescript/compiler.js";
 import { runRules } from "./runner.js";
 import { templateLiteralsOnlyRule } from "./template-literals-only.js";
@@ -10,11 +12,7 @@ function makeAnalyzer(files: Record<string, string>): AnalyzerContext {
 	for (const [name, code] of Object.entries(files)) {
 		sourceFiles.set(name, ts.createSourceFile(name, code, ts.ScriptTarget.Latest, true));
 	}
-	return {
-		program: {} as ts.Program,
-		checker: {} as ts.TypeChecker,
-		sourceFiles,
-	};
+	return { sourceFiles };
 }
 
 describe("runRules", () => {
@@ -32,7 +30,17 @@ describe("runRules", () => {
 		const results = runRules({ analyzer, rules: [templateLiteralsOnlyRule] });
 		expect(results.length).toBe(2);
 		const files = results.map((r) => r.file).sort();
-		expect(files).toEqual(["a.ts", "b.ts"]);
+		expect(files).toEqual([asRelativePosix("a.ts"), asRelativePosix("b.ts")]);
+	});
+
+	it("emits relative posix file when analyzer keys are absolute", () => {
+		const absA = path.join(process.cwd(), "src", "a.ts");
+		const analyzer = makeAnalyzer({
+			[absA]: `const x = "hello" + name;`,
+		});
+		const results = runRules({ analyzer, rules: [templateLiteralsOnlyRule] });
+		expect(results).toHaveLength(1);
+		expect(results[0]?.file as string).toBe("src/a.ts");
 	});
 
 	it("skips a rule for files matching ruleExcludes patterns", () => {

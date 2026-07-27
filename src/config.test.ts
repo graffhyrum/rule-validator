@@ -4,8 +4,11 @@ import { afterEach, describe, expect, it } from "bun:test";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { loadProjectConfig } from "./config.ts";
-import { scanFile, scanFiles } from "./index.ts";
+import { toRelativePosix } from "./paths.ts";
+
+// ?fresh: bypass cli.test.ts mock.module of ./config.ts and ./index.ts
+const { loadProjectConfig } = (await import("./config.ts?fresh" as never)) as typeof import("./config.ts");
+const { scanFile, scanFiles } = (await import("./index.ts?fresh" as never)) as typeof import("./index.ts");
 
 function makeTempDir(): string {
 	const dir = path.join(os.tmpdir(), `rv-config-test-${Date.now()}`);
@@ -99,7 +102,7 @@ describe("config exclusion integration", () => {
 			fixturePath,
 			'const a = "hello" as unknown as number;\nconst b = "x" + "y";\n',
 		);
-		const relPattern = path.relative(process.cwd(), fixtureDir) + "/target.ts";
+		const relPattern = toRelativePosix(fixturePath);
 		const ruleExcludes = { "no-unknown-as-cast": { exclude: [relPattern] } };
 		const violations = await scanFile(fixturePath, undefined, ruleExcludes);
 		const ruleNames = violations.map((v) => v.rule.name);
@@ -112,7 +115,7 @@ describe("config exclusion integration", () => {
 		const srcDir = path.join(fixtureDir, "src");
 		mkdirSync(srcDir, { recursive: true });
 		writeFileSync(path.join(srcDir, "target.ts"), 'const a = "hello" as unknown as number;\n');
-		const relSrc = path.relative(process.cwd(), srcDir);
+		const relSrc = toRelativePosix(srcDir);
 		const result = await scanFiles(`${relSrc}/**/*.ts`, { config: { exclude: [`${relSrc}/**`] } });
 		expect(result.errorCount).toBe(0);
 	});

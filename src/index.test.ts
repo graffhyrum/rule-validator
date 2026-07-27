@@ -1,5 +1,7 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import { unlinkSync, writeFileSync } from "node:fs";
+import type { PrintableViolation, Violation } from "./index";
+import { asRelativePosix } from "./paths.ts";
 
 // Mock RULES module
 const mockRules = [
@@ -23,17 +25,16 @@ mock.module("./rules", () => ({
 
 afterAll(() => mock.restore());
 
-import {
+// ?fresh: bypass cli.test.ts mock.module of ./index.ts
+const {
 	checkLineForViolations,
 	countBySeverity,
 	exitWithResult,
-	type PrintableViolation,
 	printViolations,
 	scanFile,
 	scanFiles,
 	shouldProcessFile,
-	type Violation,
-} from "./index";
+} = (await import("./index.ts?fresh" as never)) as typeof import("./index");
 
 describe("scanFile", () => {
 	it("should scan file and return violations", async () => {
@@ -124,6 +125,7 @@ describe("shouldProcessFile", () => {
 	it("should return false when file contains exclude name", () => {
 		expect(shouldProcessFile("rule-validator.ts", "rule-validator")).toBe(false);
 		expect(shouldProcessFile("some/rule-validator/file.ts", "rule-validator")).toBe(false);
+		expect(shouldProcessFile("some\\rule-validator\\file.ts", "rule-validator")).toBe(false);
 	});
 
 	it("should return true when exclude name not present", () => {
@@ -134,21 +136,21 @@ describe("shouldProcessFile", () => {
 describe("countBySeverity", () => {
 	const mockViolations: Violation[] = [
 		{
-			file: "test.ts",
+			file: asRelativePosix("test.ts"),
 			line: 1,
 			column: 0,
 			rule: { name: "error-rule", pattern: /./, message: "error", severity: "error" },
 			match: "error",
 		},
 		{
-			file: "test.ts",
+			file: asRelativePosix("test.ts"),
 			line: 2,
 			column: 0,
 			rule: { name: "warning-rule", pattern: /./, message: "warning", severity: "warning" },
 			match: "warning",
 		},
 		{
-			file: "test.ts",
+			file: asRelativePosix("test.ts"),
 			line: 3,
 			column: 0,
 			rule: { name: "error-rule2", pattern: /./, message: "error2", severity: "error" },

@@ -1,4 +1,5 @@
 import type { ProjectConfig } from "./config.ts";
+import { AST_SCAN_DEFAULT_EXCLUDES } from "./exclude-patterns.ts";
 import type { DisplayViolation, ScanResult } from "./index.ts";
 import { AST_RULES } from "./rules/all-rules.ts";
 import type { RuleResult } from "./rules/runner.ts";
@@ -7,8 +8,6 @@ import { createAnalyzer } from "./typescript/compiler.ts";
 
 export type { JsonViolation } from "./index.ts";
 
-const DEFAULT_EXCLUDE_PATTERNS = ["**/__fixtures__/**", "**/*.test.ts", "**/*.test.tsx"] as const;
-
 export interface AstScanOptions {
 	json?: boolean;
 	excludePatterns?: readonly string[];
@@ -16,7 +15,7 @@ export interface AstScanOptions {
 }
 
 export async function runAstRules(pattern: string, options?: AstScanOptions): Promise<ScanResult> {
-	const base = options?.excludePatterns ?? DEFAULT_EXCLUDE_PATTERNS;
+	const base = options?.excludePatterns ?? AST_SCAN_DEFAULT_EXCLUDES;
 	const extra = options?.config?.exclude ?? [];
 	const excludePatterns = [...base, ...extra];
 	const ruleExcludes = options?.config?.rules ?? {};

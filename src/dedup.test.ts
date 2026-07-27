@@ -1,12 +1,14 @@
 // Unit tests for deduplicateDisplayViolations and deduplicateJsonViolations.
 // Verifies key collision handling and regex-over-AST preference.
+import path from "node:path";
 import { describe, expect, it } from "bun:test";
 import { deduplicateDisplayViolations, deduplicateJsonViolations } from "./cli.ts";
 import type { DisplayViolation, JsonViolation } from "./index.ts";
+import { asRelativePosix } from "./paths.ts";
 
 function makeDisplay(overrides: Partial<DisplayViolation> = {}): DisplayViolation {
 	return {
-		file: "src/foo.ts",
+		file: asRelativePosix("src/foo.ts"),
 		line: 1,
 		column: 1,
 		rule: { name: "no-any-types", message: "msg", severity: "error" },
@@ -17,7 +19,7 @@ function makeDisplay(overrides: Partial<DisplayViolation> = {}): DisplayViolatio
 
 function makeJson(overrides: Partial<JsonViolation> = {}): JsonViolation {
 	return {
-		file: "src/foo.ts",
+		file: asRelativePosix("src/foo.ts"),
 		line: 1,
 		column: 1,
 		rule: "no-any-types",
@@ -59,9 +61,9 @@ describe("deduplicateDisplayViolations", () => {
 	});
 
 	it("normalizes absolute file path to relative", () => {
-		const abs = makeDisplay({ file: `${process.cwd()}/src/foo.ts` });
+		const abs = makeDisplay({ file: asRelativePosix(path.join(process.cwd(), "src", "foo.ts")) });
 		const result = deduplicateDisplayViolations([abs], []);
-		expect(result[0]?.file).toBe("src/foo.ts");
+		expect(result[0]?.file as string).toBe("src/foo.ts");
 	});
 });
 
@@ -92,5 +94,13 @@ describe("deduplicateJsonViolations", () => {
 		const ast = makeJson({ line: 10 });
 		const result = deduplicateJsonViolations([], [ast]);
 		expect(result).toHaveLength(1);
+	});
+
+	it("normalizes absolute and backslash paths before dedup", () => {
+		const abs = makeJson({ file: asRelativePosix(path.join(process.cwd(), "src", "foo.ts")) });
+		const slash = makeJson({ file: asRelativePosix("src\\foo.ts"), match: "other" });
+		const result = deduplicateJsonViolations([abs], [slash]);
+		expect(result).toHaveLength(1);
+		expect(result[0]?.file as string).toBe("src/foo.ts");
 	});
 });

@@ -4,6 +4,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { type } from "arktype";
 import { minimatch } from "minimatch";
+import { type RelativePosixPath, toPosixPath } from "./paths.ts";
 
 const RuleConfig = type({ "exclude?": "string[]" });
 
@@ -65,11 +66,13 @@ function validateConfig(parsed: unknown, configPath: string): ProjectConfig {
 }
 
 export function isFileExcludedForRule(
-	relPath: string,
+	relPath: RelativePosixPath | string,
 	ruleName: string,
 	ruleExcludes: Record<string, { exclude?: string[] }>,
 ): boolean {
 	const patterns = ruleExcludes[ruleName]?.exclude;
 	if (!patterns || patterns.length === 0) return false;
-	return patterns.some((pattern) => minimatch(relPath, pattern, { matchBase: false }));
+	return patterns.some((pattern) =>
+		minimatch(toPosixPath(relPath), toPosixPath(pattern), { matchBase: false }),
+	);
 }

@@ -1,6 +1,8 @@
 import path from "node:path";
 import { glob } from "glob";
 import * as ts from "typescript";
+import { ALWAYS_EXCLUDE } from "../exclude-patterns.ts";
+import { toPosixPath } from "../paths.ts";
 export function getAllDescendants(node: ts.Node): ts.Node[] {
 	const descendants: ts.Node[] = [];
 	function visit(n: ts.Node): void {
@@ -42,50 +44,58 @@ export function traverseSourceFile<T>(
 	}
 	visit(sourceFile);
 }
-export async function createAnalyzer(config: AnalyzerConfig): Promise<AnalyzerContext> {
-	const tsconfigPath: string = config.tsconfigPath ?? "./tsconfig.json";
-	const configFile: { config?: object; error?: ts.Diagnostic } = ts.readConfigFile(
-		tsconfigPath,
-		ts.sys.readFile,
-	);
-	if (configFile.error) {
-		throw new Error(`Failed to read tsconfig.json: ${configFile.error.messageText}`);
-	}
-	const parsedConfig: ts.ParsedCommandLine = ts.parseJsonConfigFileContent(
-		configFile.config,
-		ts.sys,
-		path.dirname(tsconfigPath),
-	);
-	const files = await getFilesMatchingPattern(config.pattern, config.excludePatterns);
-	const program = ts.createProgram({
-		rootNames: files,
-		options: parsedConfig.options,
-	});
-	const checker = program.getTypeChecker();
-	const sourceFiles = new Map<string, ts.SourceFile>();
-	const rootSet = new Set(files);
-	for (const file of program.getSourceFiles()) {
-		if (rootSet.has(file.fileName)) {
-			sourceFiles.set(file.fileName, file);
-		}
-	}
-	return { program, checker, sourceFiles };
-}
 const TS_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts"];
-async function getFilesMatchingPattern(
-	pattern: string,
-	excludePatterns: string[] = [],
-): Promise<string[]> {
-	const defaultExcludes: string[] = [
-		"node_modules/**",
-		"**/node_modules/**",
-		"dist/**",
-		"build/**",
-	];
-	const allExcludes: string[] = [...defaultExcludes, ...excludePatterns];
+
+export interface AnalyzerDeps {
+	listFiles: (pattern: string, excludePatterns: readonly string[]) => Promise<string[]>;
+	readFile: (absolutePath: string) => Promise<string>;
+}
+
+export interface AnalyzerConfig {
+	pattern: string;
+	excludePatterns?: string[];
+}
+
+export interface AnalyzerContext {
+	sourceFiles: Map<string, ts.SourceFile>;
+}
+
+export async function createAnalyzer(
+	config: AnalyzerConfig,
+	deps: AnalyzerDeps = defaultAnalyzerDeps,
+): Promise<AnalyzerContext> {
+	const files = await deps.listFiles(config.pattern, config.excludePatterns ?? []);
+	const sourceFiles = await parseSourceFiles(files, deps.readFile);
+	return { sourceFiles };
+}
+
+export const defaultAnalyzerDeps: AnalyzerDeps = {
+	listFiles: listTsFiles,
+	readFile: (absolutePath) => Bun.file(absolutePath).text(),
+};
+
+async function parseSourceFiles(
+	paths: readonly string[],
+	readFile: AnalyzerDeps["readFile"],
+): Promise<Map<string, ts.SourceFile>> {
+	const sourceFiles = new Map<string, ts.SourceFile>();
+	for (const filePath of paths) {
+		const normalized = toPosixPath(path.resolve(filePath));
+		const content = await readFile(normalized);
+		sourceFiles.set(
+			normalized,
+			ts.createSourceFile(normalized, content, ts.ScriptTarget.Latest, true),
+		);
+	}
+	return sourceFiles;
+}
+
+async function listTsFiles(pattern: string, excludePatterns: readonly string[]): Promise<string[]> {
+	const allExcludes: string[] = [...ALWAYS_EXCLUDE, ...excludePatterns];
 	const files: string[] = await glob(pattern, { absolute: true, ignore: allExcludes });
 	return files.filter((f: string) => TS_EXTENSIONS.some((ext: string) => f.endsWith(ext)));
 }
+
 export function getLineAndColumn(
 	sourceFile: ts.SourceFile,
 	pos: number,
@@ -112,16 +122,6 @@ export function findAncestor<T extends ts.Node>(
 		current = current.parent;
 	}
 	return undefined;
-}
-export interface AnalyzerConfig {
-	pattern: string;
-	excludePatterns?: string[];
-	tsconfigPath?: string;
-}
-export interface AnalyzerContext {
-	program: ts.Program;
-	checker: ts.TypeChecker;
-	sourceFiles: Map<string, ts.SourceFile>;
 }
 export const is = {
 	identifier: (node: ts.Node): node is ts.Identifier => ts.isIdentifier(node),

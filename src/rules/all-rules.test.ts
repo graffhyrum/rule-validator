@@ -1,3 +1,4 @@
+import path from "node:path";
 import { describe, expect, it } from "bun:test";
 import { Glob } from "bun";
 import { RULES } from "../rules.js";
@@ -9,7 +10,7 @@ describe("AST_RULES registration guard", () => {
 		const registeredNames = new Set(AST_RULES.map((r) => r.name));
 		const ruleFiles = await collectRuleFiles();
 		for (const file of ruleFiles) {
-			const basename = file.split("/").at(-1) ?? file;
+			const basename = path.basename(file);
 			const mod = await import(`./${basename}`);
 			const exportedRules = Object.values(mod).filter(
 				(
@@ -60,7 +61,7 @@ async function collectRuleFiles(): Promise<string[]> {
 	return files;
 }
 function isRuleFile(file: string): boolean {
-	const basename = file.split("/").at(-1) ?? "";
+	const basename = path.basename(file);
 	return !(
 		INFRA_FILES.has(basename) ||
 		basename.endsWith(".test.ts") ||

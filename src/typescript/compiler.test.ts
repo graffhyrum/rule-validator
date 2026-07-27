@@ -1,7 +1,59 @@
 import { describe, expect, it } from "bun:test";
+import path from "node:path";
 import ts from "typescript";
 import { assertDefined } from "../assertions";
-import { createVisitor, getAllDescendants, is } from "./compiler";
+import { toPosixPath } from "../paths.ts";
+import {
+	type AnalyzerDeps,
+	createAnalyzer,
+	createVisitor,
+	getAllDescendants,
+	is,
+} from "./compiler";
+
+describe("createAnalyzer", () => {
+	it("builds sourceFiles from injected listFiles and readFile", async () => {
+		const abs = toPosixPath(path.resolve("injected-fixture.ts"));
+		const deps: AnalyzerDeps = {
+			listFiles: async () => [abs],
+			readFile: async (filePath) => {
+				expect(filePath).toBe(abs);
+				return "const x = 1;";
+			},
+		};
+
+		const analyzer = await createAnalyzer({ pattern: "unused" }, deps);
+
+		expect(analyzer.sourceFiles.size).toBe(1);
+		const sf = analyzer.sourceFiles.get(abs);
+		assertDefined(sf);
+		expect(sf.text).toBe("const x = 1;");
+		expect(sf.fileName).toBe(abs);
+	});
+
+	it("returns empty sourceFiles when listFiles yields nothing", async () => {
+		const deps: AnalyzerDeps = {
+			listFiles: async () => [],
+			readFile: async () => {
+				throw new Error("readFile should not be called");
+			},
+		};
+
+		const analyzer = await createAnalyzer({ pattern: "unused" }, deps);
+		expect(analyzer.sourceFiles.size).toBe(0);
+	});
+
+	it("parses known-bad fixture with default deps", async () => {
+		const analyzer = await createAnalyzer({
+			pattern: "src/rules/__fixtures__/known-bad.ts",
+			excludePatterns: [],
+		});
+		expect(analyzer.sourceFiles.size).toBe(1);
+		const [filePath, sf] = [...analyzer.sourceFiles.entries()][0]!;
+		expect(filePath).toContain("known-bad.ts");
+		expect(sf.text.length).toBeGreaterThan(0);
+	});
+});
 
 describe("compiler", () => {
 	describe("getAllDescendants", () => {

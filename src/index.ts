@@ -1,7 +1,8 @@
 import { promises as fs } from "node:fs";
-import path from "node:path";
 import pc from "picocolors";
 import { isFileExcludedForRule, type ProjectConfig } from "./config.ts";
+import { REGEX_SCAN_DEFAULT_EXCLUDES } from "./exclude-patterns.ts";
+import { type RelativePosixPath, toPosixPath, toRelativePosix } from "./paths.ts";
 import { RULES } from "./rules";
 
 export interface FileReader {
@@ -49,7 +50,7 @@ export async function scanFiles(pattern: string, options?: ScanOptions): Promise
 		fileCount++;
 		const violations: Violation[] = await scanFile(file, bunFileReader, opts.ruleExcludes);
 		if (violations.length === 0) continue;
-		const relFile = path.relative(process.cwd(), file);
+		const relFile = toRelativePosix(file);
 		const context = { violations, relFile, collected, displayViolations, json: opts.json };
 		collectViolations(context);
 		const counts = countSeverities(violations);
@@ -66,7 +67,7 @@ export async function scanFiles(pattern: string, options?: ScanOptions): Promise
 }
 function collectViolations(context: {
 	violations: Violation[];
-	relFile: string;
+	relFile: RelativePosixPath;
 	collected: JsonViolation[];
 	displayViolations: DisplayViolation[];
 	json: boolean | undefined;
@@ -93,9 +94,15 @@ export async function scanFile(
 	const violations: Violation[] = [];
 	const content: string = await fileReader.readFile(filePath);
 	const lines: string[] = content.split("\n");
+	const relPath = toRelativePosix(filePath);
 	const fileSkippedRules = new Set(
 		RULES.filter((r) => r.fileGuard && !r.fileGuard(content)).map((r) => r.name),
 	);
+	for (const rule of RULES) {
+		if (isFileExcludedForRule(relPath, rule.name, ruleExcludes)) {
+			fileSkippedRules.add(rule.name);
+		}
+	}
 	for (let lineIndex: number = 0; lineIndex < lines.length; lineIndex++) {
 		const line = lines[lineIndex];
 		if (!line) {
@@ -106,22 +113,26 @@ export async function scanFile(
 			lineIndex,
 			filePath,
 			violations,
-			ruleExcludes,
 			fileSkippedRules,
+			relPath,
 		});
 	}
 	return violations;
 }
 export function checkLineForViolations(params: CheckLineParams): void {
-	const { line, lineIndex, filePath, violations, ruleExcludes = {}, fileSkippedRules } = params;
-	const relPath = path.relative(process.cwd(), filePath);
+	const { line, lineIndex, violations, ruleExcludes = {}, fileSkippedRules } = params;
+	const relPath = params.relPath ?? toRelativePosix(params.filePath);
 	for (const rule of RULES) {
 		if (fileSkippedRules?.has(rule.name)) continue;
-		if (isFileExcludedForRule(relPath, rule.name, ruleExcludes)) continue;
+		if (
+			Object.keys(ruleExcludes).length > 0 &&
+			isFileExcludedForRule(relPath, rule.name, ruleExcludes)
+		)
+			continue;
 		const matches: RegExpMatchArray[] = [...line.matchAll(rule.pattern)];
 		for (const match of matches) {
 			violations.push({
-				file: filePath,
+				file: relPath,
 				line: lineIndex + 1,
 				column: (match.index ?? 0) + 1,
 				rule,
@@ -139,7 +150,7 @@ export function shouldProcessFile(file: string, excludeName?: string): boolean {
 	return isValidExtension && isNotSelf;
 }
 function isSelfPath(file: string, excludeName: string): boolean {
-	const segments = file.split("/");
+	const segments = toPosixPath(file).split("/");
 	return segments.some((s) => s === excludeName || s.startsWith(`${excludeName}.`));
 }
 export function countBySeverity(violations: Violation[], severity: "error" | "warning"): number {
@@ -163,7 +174,7 @@ export interface PrintableViolation {
 	sourceLine?: string;
 }
 export interface DisplayViolation extends PrintableViolation {
-	file: string;
+	file: RelativePosixPath;
 }
 export function printViolations(file: string, violations: PrintableViolation[]): void {
 	console.log(pc.dim(file));
@@ -179,7 +190,7 @@ export function printViolations(file: string, violations: PrintableViolation[]):
 	}
 	console.log("");
 }
-function toJsonViolation(file: string, v: Violation): JsonViolation {
+function toJsonViolation(file: RelativePosixPath, v: Violation): JsonViolation {
 	return {
 		file,
 		line: v.line,
@@ -205,7 +216,7 @@ export interface Rule {
 	fileGuard?: (content: string) => boolean;
 }
 export interface Violation {
-	file: string;
+	file: RelativePosixPath;
 	line: number;
 	column: number;
 	rule: Rule;
@@ -219,9 +230,10 @@ export interface CheckLineParams {
 	violations: Violation[];
 	ruleExcludes?: Record<string, { exclude?: string[] }>;
 	fileSkippedRules?: Set<string>;
+	relPath?: RelativePosixPath;
 }
 export interface JsonViolation {
-	file: string;
+	file: RelativePosixPath;
 	line: number;
 	column: number;
 	rule: string;
@@ -242,25 +254,8 @@ export interface ScanResult {
 	violations?: JsonViolation[];
 	displayViolations?: DisplayViolation[];
 }
-const DEFAULT_EXCLUDE_PATTERNS: readonly string[] = [
-	"node_modules/**",
-	"**/node_modules/**",
-	"dist/**",
-	"build/**",
-	"playwright-report/**",
-	"netlify/**",
-	"**/*.test.ts",
-	"**/*.test.tsx",
-	"**/*.test.js",
-	"**/*.test.jsx",
-	"debug-cast.ts",
-	"src/rules.ts",
-	"src/rules/*.ts",
-	"scripts/**",
-	"**/__fixtures__/**",
-];
 function applyScanDefaults(options?: ScanOptions) {
-	const base = options?.excludePatterns ?? DEFAULT_EXCLUDE_PATTERNS;
+	const base = options?.excludePatterns ?? REGEX_SCAN_DEFAULT_EXCLUDES;
 	const extra = options?.config?.exclude ?? [];
 	return {
 		excludePatterns: [...base, ...extra],

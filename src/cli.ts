@@ -1,5 +1,4 @@
 #!/usr/bin/env bun
-import path from "node:path";
 import { createCommand } from "commander";
 import { runAstRules } from "./ast-scan.ts";
 import { loadProjectConfig } from "./config.ts";
@@ -11,8 +10,16 @@ import {
 	type ScanResult,
 	scanFiles,
 } from "./index.ts";
+import { toRelativePosix } from "./paths.ts";
 
 const DEFAULT_PATTERN = "**/*.{ts,tsx,js,jsx}";
+
+type CombinedScanResult = {
+	errorCount: number;
+	warningCount: number;
+	fileCount: number;
+	violations: JsonViolation[] | DisplayViolation[];
+};
 
 export async function main(argv?: string[]): Promise<void> {
 	const program = buildProgram();
@@ -37,7 +44,7 @@ export async function main(argv?: string[]): Promise<void> {
 	}
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.main) {
 	try {
 		await main();
 	} catch (e) {
@@ -49,12 +56,7 @@ function deduplicateAndPrint(
 	regex: ScanResult,
 	ast: ScanResult,
 	shouldPrint: boolean = true,
-): {
-	errorCount: number;
-	warningCount: number;
-	fileCount: number;
-	violations: unknown[];
-} {
+): CombinedScanResult {
 	const regexDisplay = regex.displayViolations ?? [];
 	const astDisplay = ast.displayViolations ?? [];
 	const dedupedDisplay = deduplicateDisplayViolations(regexDisplay, astDisplay);
@@ -97,7 +99,7 @@ export function deduplicateDisplayViolations(
 	const allDisplay = [...regexDisplay, ...astDisplay];
 	const deduped = new Map<string, DisplayViolation>();
 	for (const v of allDisplay) {
-		const normalizedFile = path.isAbsolute(v.file) ? path.relative(process.cwd(), v.file) : v.file;
+		const normalizedFile = toRelativePosix(v.file);
 		const key = `${normalizedFile}:${v.line}:${v.column}:${v.rule.name}`;
 		const existing = deduped.get(key);
 		if (!existing || v.sourceLine) {
@@ -163,24 +165,21 @@ export function deduplicateJsonViolations(
 ): JsonViolation[] {
 	const deduped = new Map<string, JsonViolation>();
 	for (const v of regexViolations) {
-		const key = `${v.file}:${v.line}:${v.column}:${v.rule}`;
-		deduped.set(key, v);
+		const file = toRelativePosix(v.file);
+		const key = `${file}:${v.line}:${v.column}:${v.rule}`;
+		deduped.set(key, { ...v, file });
 	}
 	for (const v of astViolations) {
-		const key = `${v.file}:${v.line}:${v.column}:${v.rule}`;
+		const file = toRelativePosix(v.file);
+		const key = `${file}:${v.line}:${v.column}:${v.rule}`;
 		if (!deduped.has(key)) {
-			deduped.set(key, v);
+			deduped.set(key, { ...v, file });
 		}
 	}
 	return Array.from(deduped.values());
 }
 
-function outputJsonAndExit(result: {
-	errorCount: number;
-	warningCount: number;
-	fileCount: number;
-	violations: unknown[];
-}): never {
+function outputJsonAndExit(result: CombinedScanResult): never {
 	console.log(JSON.stringify(result));
 	process.exit(result.errorCount > 0 ? 1 : 0);
 }

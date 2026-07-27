@@ -1,8 +1,10 @@
 export {
 	type AnalyzerConfig,
 	type AnalyzerContext,
+	type AnalyzerDeps,
 	createAnalyzer,
 	createVisitor,
+	defaultAnalyzerDeps,
 	findAncestor,
 	getAllDescendants,
 	getLineAndColumn,

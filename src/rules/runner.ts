@@ -1,6 +1,6 @@
-import path from "node:path";
 import type * as ts from "typescript";
 import { isFileExcludedForRule } from "../config.ts";
+import { type RelativePosixPath, toRelativePosix } from "../paths.ts";
 import type { AnalyzerContext, NodeLocation } from "../typescript/compiler.js";
 import { getNodeLocation, getNodeText, traverseSourceFile } from "../typescript/compiler.js";
 import type { Severity } from "./registry.js";
@@ -13,7 +13,7 @@ export interface RunRulesOptions {
 }
 
 export interface RuleResult {
-	file: string;
+	file: RelativePosixPath;
 	violations: FoundViolation[];
 }
 
@@ -31,14 +31,14 @@ export function runRules(options: RunRulesOptions): RuleResult[] {
 	const results: RuleResult[] = [];
 
 	for (const [fileName, sourceFile] of options.analyzer.sourceFiles) {
-		const relFile = path.relative(process.cwd(), fileName);
+		const relFile = toRelativePosix(fileName);
 		const activeRules = rules.filter(
 			(rule) => !isFileExcludedForRule(relFile, rule.name, ruleExcludes),
 		);
 		const violations = runRulesOnFile(activeRules, options.analyzer, sourceFile);
 		if (violations.length > 0) {
 			results.push({
-				file: fileName,
+				file: relFile,
 				violations,
 			});
 		}
