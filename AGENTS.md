@@ -4,7 +4,7 @@ This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get sta
 
 ## Quick Reference
 
-```bash
+```shell
 bd ready              # Find available work
 bd show <id>          # View issue details
 bd update <id> --status in_progress  # Claim work
@@ -16,7 +16,7 @@ bd sync               # Sync with git
 
 ### bv — Bead Triage (read-only, use robot flags only)
 
-```bash
+```shell
 bv --robot-triage --format toon | toon -d   # Full triage: priority, health, quick wins
 bv --robot-next --format toon | toon -d     # Single top pick
 bv --robot-insights --format toon | toon -d # Graph metrics + cycle detection
@@ -27,7 +27,7 @@ Never run bare `bv` — it opens an interactive TUI that blocks the session.
 
 ### bd — Beads Issue Tracker
 
-```bash
+```shell
 bd ready --json                             # Next unblocked issue
 bd create "<title>" --type bug --priority p0 --label security --json
 bd update <id> --status in_progress --json
@@ -39,10 +39,11 @@ bd list --json
 
 Pipe any `--robot-*` output through `toon -d` to decode token-efficient format back to JSON.
 Add `--format toon` to bv commands; pipe to `toon -d` before passing to tools.
+Pipes work the same in bash, zsh, and PowerShell when `bv`/`toon` are external CLIs.
 
 ### ms — Skill Discovery
 
-```bash
+```shell
 ms suggest --machine --cwd .               # Load context-relevant skills before starting
 ms search "<query>" -m                     # Find skills by intent
 ms load "<skill-name>"                     # Load a skill
@@ -52,7 +53,7 @@ Always run `ms suggest` at session start before implementing anything novel.
 
 ### cass — Session Search
 
-```bash
+```shell
 cass search "<query>" --json --limit 5     # Find prior solutions
 cass status                                # Index health check
 ```
@@ -61,7 +62,7 @@ Search before implementing to surface prior work from past sessions.
 
 ### gh — GitHub CLI
 
-```bash
+```shell
 gh issue list --state open --json number,title,labels
 gh pr create --title "<title>" --body "<body>"
 gh pr view <number> --json state,reviews,checks
@@ -69,7 +70,7 @@ gh pr view <number> --json state,reviews,checks
 
 ### ubs — Security Scanner
 
-```bash
+```shell
 ubs --format=json --diff .                 # Scan only changed files (fast, for pre-commit)
 ubs --format=json .                        # Full scan
 ubs --staged                               # Scan staged files only
@@ -167,3 +168,30 @@ expect(spy).toHaveBeenCalledWith(expectedArg);
 ```
 
 Never place spy assertions in `finally` blocks that also call `mock.restore()`.
+
+## Toolkit
+
+| Tool | Purpose                      | Key constraint                                                                           |
+| ---- | ---------------------------- | ---------------------------------------------------------------------------------------- |
+| br   | Issue tracker + triage       | `br doctor` at session start; `git push` at session end                                  |
+| cm   | Procedural memory (rules)    | `cm context "<task>"`; Cursor `sessionStart` hook (`.cursor/hooks/cm-session-start.ps1`) |
+| bv   | Graph-aware triage           | Always use `--robot-*` flags (bare `bv` blocks agents)                                   |
+| ms   | Skill discovery              | `ms suggest --machine --cwd .` at session start                                          |
+| cass | Session search (episodic)    | `cass search "<q>" --json --limit 5`                                                     |
+| toon | Token codec (40-60% savings) | Pipe: `--format toon \| toon -d`                                                         |
+| ubs  | Security scanner             | `.ubsignore`; `ubs --diff` before commits; `afterFileEdit` hook                          |
+| dcg  | Destructive command guard    | Cursor `beforeShellExecution` (`.cursor/hooks/dcg-guard.ps1`, `failClosed: true`)        |
+
+All tools support `--help`.
+
+### Cursor Hooks
+
+Project hooks live in `.cursor/hooks.json` (scripts under `.cursor/hooks/`):
+
+- **cm** — `sessionStart` → `cm-session-start.ps1` injects `cm context` as `additional_context`
+- **dcg** — `beforeShellExecution` → `dcg-guard.ps1` denies destructive shell commands (`failClosed: true`)
+- **ubs** — `afterFileEdit` → `ubs-after-edit.ps1` runs `ubs --diff --format=json` (never blocks; critical/high on stderr)
+
+POSIX `.sh` twins also live under `.cursor/hooks/` for non-Windows harnesses. This repo’s `hooks.json` uses PowerShell entrypoints.
+
+Trusted workspace required for project hooks. Verify in Cursor **Settings → Hooks**. Critical/high ubs findings must be fixed before continuing.

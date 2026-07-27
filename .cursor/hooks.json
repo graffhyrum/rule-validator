@@ -1,0 +1,26 @@
+{
+	"version": 1,
+	"hooks": {
+		"sessionStart": [
+			{
+				"command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/cm-session-start.ps1"
+			}
+		],
+		"beforeShellExecution": [
+			{
+				"command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/dcg-guard.ps1",
+				"failClosed": true
+			}
+		],
+		"afterFileEdit": [
+			{
+				"command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/ubs-after-edit.ps1"
+			}
+		],
+		"stop": [
+			{
+				"command": "bun vet"
+			}
+		]
+	}
+}
