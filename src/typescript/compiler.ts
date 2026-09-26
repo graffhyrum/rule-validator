@@ -3,25 +3,6 @@ import { glob } from "glob";
 import * as ts from "typescript";
 import { ALWAYS_EXCLUDE } from "../exclude-patterns.ts";
 import { toPosixPath } from "../paths.ts";
-export function getAllDescendants(node: ts.Node): ts.Node[] {
-	const descendants: ts.Node[] = [];
-	function visit(n: ts.Node): void {
-		descendants.push(n);
-		ts.forEachChild(n, visit);
-	}
-	visit(node);
-	return descendants;
-}
-export function createVisitor<T>(options: VisitorOptions<T>): (node: ts.Node, ctx: T) => void {
-	return (node: ts.Node, ctx: T) => {
-		function visit(n: ts.Node): void {
-			options.enter?.(n, ctx);
-			ts.forEachChild(n, visit);
-			options.leave?.(n, ctx);
-		}
-		visit(node);
-	};
-}
 export function getNodeLocation(sourceFile: ts.SourceFile, node: ts.Node): NodeLocation {
 	const start = getLineAndColumn(sourceFile, node.getStart());
 	const end = getLineAndColumn(sourceFile, node.getEnd());
@@ -110,19 +91,6 @@ export function getLineAndColumn(
 export function getNodeText(sourceFile: ts.SourceFile, node: ts.Node): string {
 	return node.getText(sourceFile);
 }
-export function findAncestor<T extends ts.Node>(
-	node: ts.Node,
-	predicate: (n: ts.Node) => n is T,
-): T | undefined {
-	let current: ts.Node | undefined = node.parent;
-	while (current) {
-		if (predicate(current)) {
-			return current;
-		}
-		current = current.parent;
-	}
-	return undefined;
-}
 export const is = {
 	identifier: (node: ts.Node): node is ts.Identifier => ts.isIdentifier(node),
 	variableDeclaration: (node: ts.Node): node is ts.VariableDeclaration =>
@@ -165,8 +133,4 @@ export interface NodeLocation {
 	column: number;
 	endLine: number;
 	endColumn: number;
-}
-export interface VisitorOptions<T> {
-	enter?: (node: ts.Node, ctx: T) => void;
-	leave?: (node: ts.Node, ctx: T) => void;
 }

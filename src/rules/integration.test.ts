@@ -24,6 +24,7 @@ describe("integration: rule engine against fixture files", () => {
 		expect(ruleNames.has("no-waitForTimeout")).toBe(true);
 		expect(ruleNames.has("no-expect-typeof-tobe")).toBe(true);
 		expect(ruleNames.has("no-toBeInstanceOf")).toBe(true);
+		expect(ruleNames.has("prefer-bun-file-io")).toBe(true);
 	});
 
 	it("should find zero violations in known-good fixture", async () => {

@@ -17,10 +17,11 @@ mock.module("./ast-scan.ts", () => ({
 	runAstRules: runAstRulesMock,
 }));
 
-const realConfig = await import("./config.ts");
+const realConfig = (await import("./config.ts?fresh" as never)) as typeof import("./config.ts");
 mock.module("./config.ts", () => ({
 	...realConfig,
 	loadProjectConfig: mock(async () => ({})),
+	isFileExcludedForRule: realConfig.isFileExcludedForRule,
 }));
 
 const { main } = await import("./cli.ts");
@@ -113,14 +114,18 @@ describe("CLI main function", () => {
 			console.error = originalError;
 		}
 
-		expect(consoleMock).toHaveBeenCalledWith("Error scanning files:", "scan failed");
-		expect(exitSpy).toHaveBeenCalledWith(1);
-		expect(exitWithResultMock).not.toHaveBeenCalled();
-		const stdout = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
-		expect(stdout).toContain("rule-validator");
-		expect(stdout).toContain("Run failed");
-		expect(stdout).not.toContain("\n\n\n");
-		logSpy.mockRestore();
+		try {
+			expect(consoleMock).toHaveBeenCalledWith("Error scanning files:", "scan failed");
+			expect(exitSpy).toHaveBeenCalledWith(1);
+			expect(exitWithResultMock).not.toHaveBeenCalled();
+			const stdout = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
+			expect(stdout).toContain("rule-validator");
+			expect(stdout).toContain("Run failed");
+			expect(stdout).not.toContain("\n\n\n");
+		} finally {
+			logSpy.mockRestore();
+			exitSpy.mockRestore();
+		}
 	});
 
 	it("human run stdout starts with framed header", async () => {
@@ -161,8 +166,12 @@ describe("CLI --version flag", () => {
 		}
 
 		const output = captured.join("");
-		expect(output).toContain(version);
-		expect(exitSpy).toHaveBeenCalledWith(0);
+		try {
+			expect(output).toContain(version);
+			expect(exitSpy).toHaveBeenCalledWith(0);
+		} finally {
+			exitSpy.mockRestore();
+		}
 	});
 
 	it("-V should output the package version", async () => {
@@ -175,7 +184,7 @@ describe("CLI --version flag", () => {
 		const originalWrite = process.stdout.write;
 		process.stdout.write = writeMock as typeof process.stdout.write;
 
-		spyOn(process, "exit").mockImplementation((code) => {
+		const exitSpy = spyOn(process, "exit").mockImplementation((code) => {
 			throw new Error(`exit ${code}`);
 		});
 
@@ -185,6 +194,7 @@ describe("CLI --version flag", () => {
 			expect((e as Error).message).toBe("exit 0");
 		} finally {
 			process.stdout.write = originalWrite;
+			exitSpy.mockRestore();
 		}
 
 		const output = captured.join("");
@@ -215,11 +225,15 @@ describe("CLI --help flag", () => {
 		}
 
 		const output = captured.join("");
-		expect(output).toContain("rule-validator");
-		expect(output).toContain("pattern");
-		expect(output).toContain("--version");
-		expect(output).toContain("--help");
-		expect(exitSpy).toHaveBeenCalledWith(0);
+		try {
+			expect(output).toContain("rule-validator");
+			expect(output).toContain("pattern");
+			expect(output).toContain("--version");
+			expect(output).toContain("--help");
+			expect(exitSpy).toHaveBeenCalledWith(0);
+		} finally {
+			exitSpy.mockRestore();
+		}
 	});
 });
 
@@ -248,7 +262,7 @@ describe("CLI --json flag", () => {
 		});
 		const originalLog = console.log;
 		console.log = logMock;
-		spyOn(process, "exit").mockImplementation((code) => {
+		const exitSpy = spyOn(process, "exit").mockImplementation((code) => {
 			throw new Error(`exit ${code}`);
 		});
 
@@ -258,6 +272,7 @@ describe("CLI --json flag", () => {
 			expect((e as Error).message).toBe("exit 1");
 		} finally {
 			console.log = originalLog;
+			exitSpy.mockRestore();
 		}
 
 		const output = captured[0] ?? "";

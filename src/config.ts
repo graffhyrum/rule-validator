@@ -6,14 +6,30 @@ import { type } from "arktype";
 import { minimatch } from "minimatch";
 import { type RelativePosixPath, toPosixPath } from "./paths.ts";
 
-const RuleConfig = type({ "exclude?": "string[]" });
+const rejectArray = (
+	data: unknown,
+	ctx: { reject: (problem: { expected: string; actual: string }) => boolean },
+) => {
+	if (Array.isArray(data)) return ctx.reject({ expected: "object", actual: "array" });
+	return true;
+};
+
+const RuleConfig = type({ "exclude?": "string[]" }).onUndeclaredKey("reject").narrow(rejectArray);
+
+const RulesConfig = type({ "[string]": RuleConfig }).narrow(rejectArray);
 
 const ProjectConfigSchema = type({
 	"exclude?": "string[]",
-	"rules?": type({ "[string]": RuleConfig }),
-});
+	"rules?": RulesConfig,
+})
+	.onUndeclaredKey("reject")
+	.narrow((data, ctx) => {
+		if (Array.isArray(data)) return ctx.reject({ expected: "object", actual: "array" });
+		return true;
+	});
 
 export type ProjectConfig = typeof ProjectConfigSchema.infer;
+export type RuleExcludes = NonNullable<ProjectConfig["rules"]>;
 
 export async function loadProjectConfig(startDir?: string): Promise<ProjectConfig> {
 	const dir = startDir ?? process.cwd();
@@ -34,15 +50,22 @@ async function findConfigFile(startDir: string): Promise<string | null> {
 	}
 }
 
-function fileExists(filePath: string): Promise<boolean> {
-	return fs
-		.access(filePath)
-		.then(() => true)
-		.catch(() => false);
+async function fileExists(filePath: string): Promise<boolean> {
+	try {
+		await fs.access(filePath);
+		return true;
+	} catch (error) {
+		if (isEnoent(error)) return false;
+		throw error;
+	}
+}
+
+function isEnoent(error: unknown): boolean {
+	return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
 }
 
 async function parseConfigFile(configPath: string): Promise<ProjectConfig> {
-	const raw = await fs.readFile(configPath, "utf-8");
+	const raw = await Bun.file(configPath).text();
 	const parsed = parseJson(raw, configPath);
 	return validateConfig(parsed, configPath);
 }
@@ -68,7 +91,7 @@ function validateConfig(parsed: unknown, configPath: string): ProjectConfig {
 export function isFileExcludedForRule(
 	relPath: RelativePosixPath | string,
 	ruleName: string,
-	ruleExcludes: Record<string, { exclude?: string[] }>,
+	ruleExcludes: RuleExcludes,
 ): boolean {
 	const patterns = ruleExcludes[ruleName]?.exclude;
 	if (!patterns || patterns.length === 0) return false;

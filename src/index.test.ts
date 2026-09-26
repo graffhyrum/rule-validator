@@ -309,17 +309,19 @@ describe("exitWithResult", () => {
 		const logSpy = spyOn(console, "log").mockImplementation(() => {});
 
 		try {
-			exitWithResult(2, 1);
-		} catch {
-			// expected: process.exit throws in test
+			try {
+				exitWithResult(2, 1);
+			} catch {
+				// expected: process.exit throws in test
+			}
+			expect(exitSpy).toHaveBeenCalledWith(1);
+			const output = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
+			expect(output).toContain("Fix errors before proceeding");
+			expect(output).not.toContain("\n\n\n");
+		} finally {
+			exitSpy.mockRestore();
+			logSpy.mockRestore();
 		}
-
-		expect(exitSpy).toHaveBeenCalledWith(1);
-		const output = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
-		expect(output).toContain("Fix errors before proceeding");
-		expect(output).not.toContain("\n\n\n");
-		exitSpy.mockRestore();
-		logSpy.mockRestore();
 	});
 
 	it("exits 0 and prints warning report when only warnings", () => {
@@ -329,17 +331,19 @@ describe("exitWithResult", () => {
 		const logSpy = spyOn(console, "log").mockImplementation(() => {});
 
 		try {
-			exitWithResult(0, 3);
-		} catch {
-			// expected
+			try {
+				exitWithResult(0, 3);
+			} catch {
+				// expected
+			}
+			expect(exitSpy).toHaveBeenCalledWith(0);
+			const output = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
+			expect(output).toContain("Consider fixing warnings");
+			expect(output).not.toContain("\n\n\n");
+		} finally {
+			exitSpy.mockRestore();
+			logSpy.mockRestore();
 		}
-
-		expect(exitSpy).toHaveBeenCalledWith(0);
-		const output = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
-		expect(output).toContain("Consider fixing warnings");
-		expect(output).not.toContain("\n\n\n");
-		exitSpy.mockRestore();
-		logSpy.mockRestore();
 	});
 
 	it("exits 0 and prints success with file and rule counts when no violations", () => {
@@ -349,17 +353,19 @@ describe("exitWithResult", () => {
 		const logSpy = spyOn(console, "log").mockImplementation(() => {});
 
 		try {
-			exitWithResult(0, 0, 5);
-		} catch {
-			// expected
+			try {
+				exitWithResult(0, 0, 5);
+			} catch {
+				// expected
+			}
+			expect(exitSpy).toHaveBeenCalledWith(0);
+			const output = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
+			expect(output).toContain("5 files passed");
+			expect(output).toContain("rules checked");
+			expect(output).not.toContain("\n\n\n");
+		} finally {
+			exitSpy.mockRestore();
+			logSpy.mockRestore();
 		}
-
-		expect(exitSpy).toHaveBeenCalledWith(0);
-		const output = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
-		expect(output).toContain("5 files passed");
-		expect(output).toContain("rules checked");
-		expect(output).not.toContain("\n\n\n");
-		exitSpy.mockRestore();
-		logSpy.mockRestore();
 	});
 });

@@ -3,7 +3,7 @@ import { createViolation, type ASTRule, type RuleContext } from "./rule.js";
 import { is } from "../typescript/index.js";
 
 const MESSAGE =
-	"Unexpected non-null assertion (`!`). Use an `assertDefined<T>(x:unknown):asserts x is NonNullable<T>` guard function,  or narrow the type explicitly.";
+	"Unexpected non-null assertion (`!`). Use an `assertDefined<T>(x: T): asserts x is NonNullable<T>` guard function, or narrow the type explicitly.";
 
 export const noNonNullAssertionRule: ASTRule = {
 	name: "no-non-null-assertion",

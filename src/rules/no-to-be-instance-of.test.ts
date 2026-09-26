@@ -49,6 +49,15 @@ describe("no-toBeInstanceOf rule", () => {
 		expect(testFileResults[0]?.violations.length).toBe(1);
 	});
 
+	it("should not flag expect(err).toBeInstanceOf(ArkErrors)", () => {
+		const analyzer = createTestSourceFile(`
+			expect(err).toBeInstanceOf(ArkErrors);
+		`);
+		const results = runRules({ analyzer, rules: [noToBeInstanceOfRule] });
+		const testFileResults = results.filter((r) => r.file === "test.ts");
+		expect(testFileResults.length).toBe(0);
+	});
+
 	it("should not flag expect(x).not.toBeInstanceOf() since it chains through .not", () => {
 		const analyzer = createTestSourceFile(`
 			expect(x).not.toBeInstanceOf(Error);

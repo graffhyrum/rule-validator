@@ -24,8 +24,7 @@ describe("runAstRules", () => {
 
 	beforeAll(async () => {
 		mock.restore();
-		// biome-ignore lint/suspicious/noExplicitAny: cache-busting path has no type declaration
-		const mod = (await import("./ast-scan.ts?fresh" as any)) as typeof import("./ast-scan.ts");
+		const mod = (await import("./ast-scan.ts?fresh" as never)) as typeof import("./ast-scan.ts");
 		runAstRules = mod.runAstRules;
 		emptyExcludeResult = await runAstRules(FIXTURE_PATTERN, { excludePatterns: [] });
 		jsonResult = await runAstRules(FIXTURE_PATTERN, { excludePatterns: [], json: true });

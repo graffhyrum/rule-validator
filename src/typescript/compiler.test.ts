@@ -3,13 +3,7 @@ import path from "node:path";
 import ts from "typescript";
 import { assertDefined } from "../assertions";
 import { toPosixPath } from "../paths.ts";
-import {
-	type AnalyzerDeps,
-	createAnalyzer,
-	createVisitor,
-	getAllDescendants,
-	is,
-} from "./compiler";
+import { type AnalyzerDeps, createAnalyzer, is } from "./compiler";
 
 describe("createAnalyzer", () => {
 	it("builds sourceFiles from injected listFiles and readFile", async () => {
@@ -56,79 +50,19 @@ describe("createAnalyzer", () => {
 });
 
 describe("compiler", () => {
-	describe("getAllDescendants", () => {
-		it("should return all descendants of a node including itself", () => {
-			// Create a real source file for testing
-			const sourceFile = ts.createSourceFile(
-				"test.ts",
-				"const x = 1;",
-				ts.ScriptTarget.Latest,
-				true,
-			);
-
-			const statement = sourceFile.statements[0];
-			assertDefined(statement);
-
-			const result = getAllDescendants(statement);
-
-			// Should include the statement and its descendants
-			expect(result.length).toBeGreaterThan(1);
-			expect(result[0]).toBe(statement);
-			expect(result).toContain(statement);
-		});
-
-		it("should handle node with no children", () => {
-			// Create a source file with a simple identifier
-			const sourceFile = ts.createSourceFile("test.ts", "x;", ts.ScriptTarget.Latest, true);
-			const statement = sourceFile.statements[0];
-			assertDefined(statement);
-
-			expect(ts.isExpressionStatement(statement)).toBe(true);
-
-			const expressionStatement = statement as ts.ExpressionStatement;
-			const result = getAllDescendants(expressionStatement.expression);
-
-			// Identifier has no children
-			expect(result).toEqual([expressionStatement.expression]);
-		});
-	});
-
-	describe("createVisitor", () => {
-		it("should call enter and leave in correct order", () => {
-			const sourceFile = ts.createSourceFile(
-				"test.ts",
-				"const x = 1;",
-				ts.ScriptTarget.Latest,
-				true,
-			);
-			const statement = sourceFile.statements[0];
-			assertDefined(statement);
-
-			const calls: string[] = [];
-			const visitor = createVisitor({
-				enter: (node, _ctx) => {
-					calls.push(`enter-${node.kind}`);
-				},
-				leave: (node, _ctx) => {
-					calls.push(`leave-${node.kind}`);
-				},
-			});
-
-			visitor(statement, {});
-
-			expect(calls.length).toBeGreaterThan(2);
-			expect(calls[0]).toBe(`enter-${statement.kind}`);
-			expect(calls.at(-1)).toBe(`leave-${statement.kind}`);
-		});
-	});
-
 	describe("is type guards", () => {
 		function parse(src: string): ts.SourceFile {
 			return ts.createSourceFile("t.ts", src, ts.ScriptTarget.Latest, true);
 		}
 
 		function findByKind(sf: ts.SourceFile, kind: ts.SyntaxKind): ts.Node {
-			const found = getAllDescendants(sf).find((n) => n.kind === kind);
+			const nodes: ts.Node[] = [];
+			function visit(node: ts.Node): void {
+				nodes.push(node);
+				ts.forEachChild(node, visit);
+			}
+			visit(sf);
+			const found = nodes.find((n) => n.kind === kind);
 			assertDefined(found);
 			return found;
 		}

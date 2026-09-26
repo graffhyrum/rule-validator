@@ -1,9 +1,10 @@
 import { promises as fs } from "node:fs";
 import pc from "picocolors";
-import { isFileExcludedForRule, type ProjectConfig } from "./config.ts";
+import { isFileExcludedForRule, type ProjectConfig, type RuleExcludes } from "./config.ts";
 import { REGEX_SCAN_DEFAULT_EXCLUDES } from "./exclude-patterns.ts";
 import { type RelativePosixPath, toPosixPath, toRelativePosix } from "./paths.ts";
 import { RULES } from "./rules";
+import type { Severity } from "./rules/rule.ts";
 import { classifyOutcome, outcomeExitCode, printRunFooter } from "./run-frame.ts";
 
 export interface FileReader {
@@ -85,7 +86,7 @@ function collectViolations(context: {
 export async function scanFile(
 	filePath: string,
 	fileReader: FileReader = bunFileReader,
-	ruleExcludes: Record<string, { exclude?: string[] }> = {},
+	ruleExcludes: RuleExcludes = {},
 ): Promise<Violation[]> {
 	const violations: Violation[] = [];
 	const content: string = await fileReader.readFile(filePath);
@@ -149,7 +150,7 @@ function isSelfPath(file: string, excludeName: string): boolean {
 	const segments = toPosixPath(file).split("/");
 	return segments.some((s) => s === excludeName || s.startsWith(`${excludeName}.`));
 }
-export function countBySeverity(violations: Violation[], severity: "error" | "warning"): number {
+export function countBySeverity(violations: Violation[], severity: Severity): number {
 	const counts = countSeverities(violations);
 	return severity === "error" ? counts.errors : counts.warnings;
 }
@@ -165,7 +166,7 @@ function countSeverities(violations: Violation[]): { errors: number; warnings: n
 export interface PrintableViolation {
 	line: number;
 	column: number;
-	rule: { name: string; message: string; severity: "error" | "warning" };
+	rule: { name: string; message: string; severity: Severity };
 	match: string;
 	sourceLine?: string;
 }
@@ -208,7 +209,7 @@ export interface Rule {
 	name: string;
 	pattern: RegExp;
 	message: string;
-	severity: "error" | "warning";
+	severity: Severity;
 	fileGuard?: (content: string) => boolean;
 }
 export interface Violation {
@@ -224,7 +225,7 @@ export interface CheckLineParams {
 	lineIndex: number;
 	filePath: string;
 	violations: Violation[];
-	ruleExcludes?: Record<string, { exclude?: string[] }>;
+	ruleExcludes?: RuleExcludes;
 	fileSkippedRules?: Set<string>;
 	relPath?: RelativePosixPath;
 }
@@ -234,7 +235,7 @@ export interface JsonViolation {
 	column: number;
 	rule: string;
 	message: string;
-	severity: "error" | "warning";
+	severity: Severity;
 	match: string;
 }
 export interface ScanOptions {

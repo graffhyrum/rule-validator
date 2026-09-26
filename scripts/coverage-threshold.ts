@@ -20,8 +20,17 @@ if (exitCode !== 0) process.exit(2);
 checkThreshold(raw);
 
 function checkThreshold(output: string) {
+	if (countCoverageRows(output) === 0) {
+		console.error("Coverage threshold failed: no src coverage rows parsed");
+		process.exit(1);
+	}
 	const failures = collectFailures(output);
 	reportAndExit(failures);
+}
+
+function countCoverageRows(output: string): number {
+	return output.split("\n").filter((line) => /^\s+src[/\\]\S+\s+\|\s+[\d.]+\s+\|/.test(line))
+		.length;
 }
 
 function collectFailures(output: string): string[] {

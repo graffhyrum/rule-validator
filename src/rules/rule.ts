@@ -1,6 +1,7 @@
 import type * as ts from "typescript";
 import type { AnalyzerContext } from "../typescript/compiler.js";
-import type { Severity } from "./registry.js";
+
+export type Severity = "error" | "warning";
 
 export interface RuleViolation {
 	rule: ASTRule;
@@ -21,10 +22,6 @@ export interface ASTRule {
 	description: string;
 	severity: Severity;
 	visit: (context: RuleContext, node: ts.Node) => void;
-}
-
-export interface RuleModule {
-	rule: ASTRule;
 }
 
 export function createViolation(context: RuleContext, node: ts.Node, message: string): void {

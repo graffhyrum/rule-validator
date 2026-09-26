@@ -18,6 +18,8 @@ export const noToBeInstanceOfRule: ASTRule = {
 			is.identifier(node.expression.expression.expression) &&
 			node.expression.expression.expression.text === "expect"
 		) {
+			const arg = node.arguments[0];
+			if (arg !== undefined && is.identifier(arg) && arg.text === "ArkErrors") return;
 			createViolation(context, node, MESSAGE);
 		}
 	},

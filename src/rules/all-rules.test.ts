@@ -4,7 +4,17 @@ import { Glob } from "bun";
 import { RULES } from "../rules.js";
 import { AST_RULES } from "./all-rules.js";
 
-const INFRA_FILES = new Set(["index.ts", "rule.ts", "runner.ts", "registry.ts", "test-helpers.ts"]);
+const INFRA_FILES = new Set([
+	"index.ts",
+	"rule.ts",
+	"runner.ts",
+	"test-helpers.ts",
+	"replaceable-fs-symbols.ts",
+	"fs-module-specifiers.ts",
+	"write-file-non-bun-flag.ts",
+	"copy-file-flags.ts",
+	"fs-file-bindings.ts",
+]);
 describe("AST_RULES registration guard", () => {
 	it("every rule exported from src/rules is registered in AST_RULES", async () => {
 		const registeredNames = new Set(AST_RULES.map((r) => r.name));

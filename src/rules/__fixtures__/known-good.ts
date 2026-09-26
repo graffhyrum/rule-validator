@@ -1,4 +1,5 @@
 /* Clean code — no rule violations expected */
+import { appendFileSync, mkdirSync, readdirSync } from "node:fs";
 
 // Proper typing instead of any
 function processData(data: string): string {
@@ -49,4 +50,24 @@ const errorCount = 3;
 const warningCount = 2;
 const totalCount = errorCount + warningCount;
 
-export { processData, element, count, Counter, greeting, waitExample, typeTests, instanceTests, totalCount };
+// prefer-bun-file-io: allowed node:fs + Bun APIs
+void mkdirSync;
+void readdirSync;
+void appendFileSync;
+async function bunIoExample(): Promise<void> {
+	const text = await Bun.file("ok.txt").text();
+	await Bun.write("out.txt", text);
+}
+
+export {
+	processData,
+	element,
+	count,
+	Counter,
+	greeting,
+	waitExample,
+	typeTests,
+	instanceTests,
+	totalCount,
+	bunIoExample,
+};

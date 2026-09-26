@@ -60,6 +60,24 @@ describe("deduplicateDisplayViolations", () => {
 		expect(result[0]?.sourceLine).toBe("const x: any = 1");
 	});
 
+	it("keeps the regex entry when the AST entry also has sourceLine", () => {
+		const regex = makeDisplay({ match: "regex", sourceLine: "regex line" });
+		const ast = makeDisplay({ match: "ast", sourceLine: "ast line" });
+		const result = deduplicateDisplayViolations([regex], [ast]);
+		expect(result).toHaveLength(1);
+		expect(result[0]?.match).toBe("regex");
+		expect(result[0]?.sourceLine).toBe("regex line");
+	});
+
+	it("regex entry wins even when only the AST hit has sourceLine", () => {
+		const regex = makeDisplay({ match: "regex-hit" });
+		const ast = makeDisplay({ sourceLine: "ast line", match: "ast-hit" });
+		const result = deduplicateDisplayViolations([regex], [ast]);
+		expect(result).toHaveLength(1);
+		expect(result[0]?.match).toBe("regex-hit");
+		expect(result[0]?.sourceLine).toBeUndefined();
+	});
+
 	it("normalizes absolute file path to relative", () => {
 		const abs = makeDisplay({ file: asRelativePosix(path.join(process.cwd(), "src", "foo.ts")) });
 		const result = deduplicateDisplayViolations([abs], []);

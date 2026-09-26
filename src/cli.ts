@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { createCommand } from "commander";
+import packageJson from "../package.json";
 import { runAstRules } from "./ast-scan.ts";
 import { loadProjectConfig } from "./config.ts";
 import {
@@ -52,6 +53,7 @@ if (import.meta.main) {
 		await main();
 	} catch (e) {
 		console.error(e instanceof Error ? e.message : e);
+		process.exit(1);
 	}
 }
 
@@ -99,13 +101,16 @@ export function deduplicateDisplayViolations(
 	regexDisplay: DisplayViolation[],
 	astDisplay: DisplayViolation[],
 ): DisplayViolation[] {
-	const allDisplay = [...regexDisplay, ...astDisplay];
 	const deduped = new Map<string, DisplayViolation>();
-	for (const v of allDisplay) {
+	for (const v of regexDisplay) {
 		const normalizedFile = toRelativePosix(v.file);
 		const key = `${normalizedFile}:${v.line}:${v.column}:${v.rule.name}`;
-		const existing = deduped.get(key);
-		if (!existing || v.sourceLine) {
+		deduped.set(key, { ...v, file: normalizedFile });
+	}
+	for (const v of astDisplay) {
+		const normalizedFile = toRelativePosix(v.file);
+		const key = `${normalizedFile}:${v.line}:${v.column}:${v.rule.name}`;
+		if (!deduped.has(key)) {
 			deduped.set(key, { ...v, file: normalizedFile });
 		}
 	}
@@ -113,7 +118,7 @@ export function deduplicateDisplayViolations(
 }
 
 function printDedupedDisplay(violations: DisplayViolation[]): void {
-	const sorted = violations.sort((a, b) => {
+	const sorted = [...violations].sort((a, b) => {
 		if (a.file !== b.file) return a.file.localeCompare(b.file);
 		if (a.line !== b.line) return a.line - b.line;
 		return a.column - b.column;
@@ -188,10 +193,9 @@ function outputJsonAndExit(result: CombinedScanResult): never {
 }
 
 function buildProgram() {
-	const { version } = require("../package.json");
 	const program = createCommand("rule-validator");
 	program.description("Validate TypeScript/JavaScript files against lint rules");
-	program.version(version, "-V, --version");
+	program.version(packageJson.version, "-V, --version");
 	program.argument("[pattern]", "glob pattern for files to scan", DEFAULT_PATTERN);
 	program.option("--json", "output results as JSON");
 	return program;

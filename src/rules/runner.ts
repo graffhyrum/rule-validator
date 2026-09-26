@@ -1,15 +1,14 @@
 import type * as ts from "typescript";
-import { isFileExcludedForRule } from "../config.ts";
+import { isFileExcludedForRule, type RuleExcludes } from "../config.ts";
 import { type RelativePosixPath, toRelativePosix } from "../paths.ts";
 import type { AnalyzerContext, NodeLocation } from "../typescript/compiler.js";
 import { getNodeLocation, getNodeText, traverseSourceFile } from "../typescript/compiler.js";
-import type { Severity } from "./registry.js";
-import type { ASTRule, RuleContext } from "./rule.js";
+import type { ASTRule, RuleContext, Severity } from "./rule.js";
 
 export interface RunRulesOptions {
 	rules: ASTRule[];
 	analyzer: AnalyzerContext;
-	ruleExcludes?: Record<string, { exclude?: string[] }>;
+	ruleExcludes?: RuleExcludes;
 }
 
 export interface RuleResult {

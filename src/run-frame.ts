@@ -54,9 +54,7 @@ export function formatRunFooter(outcome: RunOutcome, width: number): string {
 				),
 			);
 		case "warnings":
-			return pc.yellow(
-				frameRuleLine("⚠ Consider fixing warnings for better compliance.", width),
-			);
+			return pc.yellow(frameRuleLine("⚠ Consider fixing warnings for better compliance.", width));
 		case "errors":
 			return pc.red(frameRuleLine("✖ Fix errors before proceeding.", width));
 		case "crashed":
@@ -72,9 +70,7 @@ export function formatRunHeader(width: number): string {
 	return pc.dim(frameRuleLine("rule-validator", width));
 }
 
-export function classifyOutcome(
-	counts: OutcomeCounts,
-): Exclude<RunOutcome, { kind: "crashed" }> {
+export function classifyOutcome(counts: OutcomeCounts): Exclude<RunOutcome, { kind: "crashed" }> {
 	if (counts.errorCount > 0) {
 		return {
 			kind: "errors",

@@ -1,6 +1,5 @@
 import path from "node:path";
 
-export type FsPath = string & { readonly __brand: "FsPath" };
 export type RelativePosixPath = string & { readonly __brand: "RelativePosixPath" };
 
 export function asRelativePosix(p: string): RelativePosixPath {

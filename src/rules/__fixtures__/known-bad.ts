@@ -1,4 +1,5 @@
 /* eslint-disable -- fixture file with intentional violations */
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
 // no-any-types: uses `any` keyword
 function processData(data: any): any {
@@ -40,4 +41,19 @@ function instanceTests(x: unknown) {
 	expect(x).toBeInstanceOf(Error);
 }
 
-export { processData, element, nested, forced, MathUtils, greeting, waitExample, typeTests, instanceTests };
+// prefer-bun-file-io: replaceable node:fs APIs
+existsSync("p");
+readFileSync("p");
+writeFileSync("p", "d");
+
+export {
+	processData,
+	element,
+	nested,
+	forced,
+	MathUtils,
+	greeting,
+	waitExample,
+	typeTests,
+	instanceTests,
+};

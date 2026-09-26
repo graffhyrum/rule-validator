@@ -4,6 +4,7 @@ import { noStaticClassesRule } from "./no-static-classes.js";
 import { noToBeInstanceOfRule } from "./no-to-be-instance-of.js";
 import { noUnknownAsCastRule } from "./no-unknown-as-cast.js";
 import { noWaitForTimeoutRule } from "./no-wait-for-timeout.js";
+import { preferBunFileIoRule } from "./prefer-bun-file-io.js";
 import type { ASTRule } from "./rule.js";
 import { templateLiteralsOnlyRule } from "./template-literals-only.js";
 
@@ -17,5 +18,6 @@ export const AST_RULES: ASTRule[] = [
 	noToBeInstanceOfRule,
 	noUnknownAsCastRule,
 	noWaitForTimeoutRule,
+	preferBunFileIoRule,
 	templateLiteralsOnlyRule,
 ];

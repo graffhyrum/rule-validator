@@ -75,6 +75,30 @@ describe("loadProjectConfig", () => {
 		await expect(loadProjectConfig(tmpDir)).rejects.toThrow("not valid JSON");
 	});
 
+	it("throws when the config file is a JSON array", async () => {
+		tmpDir = path.join(os.tmpdir(), `rv-array-${Date.now()}`);
+		mkdirSync(tmpDir, { recursive: true });
+		writeFileSync(path.join(tmpDir, "rule-validator.config.json"), "[]");
+		await expect(loadProjectConfig(tmpDir)).rejects.toThrow("invalid");
+	});
+
+	it("throws when rules is a JSON array", async () => {
+		tmpDir = path.join(os.tmpdir(), `rv-rules-array-${Date.now()}`);
+		mkdirSync(tmpDir, { recursive: true });
+		writeFileSync(path.join(tmpDir, "rule-validator.config.json"), JSON.stringify({ rules: [] }));
+		await expect(loadProjectConfig(tmpDir)).rejects.toThrow("invalid");
+	});
+
+	it("throws when the config has an unknown key", async () => {
+		tmpDir = path.join(os.tmpdir(), `rv-typo-${Date.now()}`);
+		mkdirSync(tmpDir, { recursive: true });
+		writeFileSync(
+			path.join(tmpDir, "rule-validator.config.json"),
+			JSON.stringify({ excludes: ["legacy/**"] }),
+		);
+		await expect(loadProjectConfig(tmpDir)).rejects.toThrow("invalid");
+	});
+
 	it("throws a clear error for schema violations", async () => {
 		tmpDir = path.join(os.tmpdir(), `rv-badschema-${Date.now()}`);
 		mkdirSync(tmpDir, { recursive: true });

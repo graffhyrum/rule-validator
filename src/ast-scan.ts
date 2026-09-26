@@ -1,6 +1,6 @@
 import type { ProjectConfig } from "./config.ts";
 import { AST_SCAN_DEFAULT_EXCLUDES } from "./exclude-patterns.ts";
-import type { DisplayViolation, ScanResult } from "./index.ts";
+import type { DisplayViolation, JsonViolation, ScanResult } from "./index.ts";
 import { AST_RULES } from "./rules/all-rules.ts";
 import type { RuleResult } from "./rules/runner.ts";
 import { runRules } from "./rules/runner.ts";
@@ -45,7 +45,7 @@ function toScanResult(results: RuleResult[], json?: boolean): ScanResult {
 	return { errorCount, warningCount, violations, displayViolations };
 }
 
-function collectJsonViolations(results: RuleResult[]) {
+function collectJsonViolations(results: RuleResult[]): JsonViolation[] {
 	return results.flatMap((r) =>
 		r.violations.map((v) => ({
 			file: r.file,
