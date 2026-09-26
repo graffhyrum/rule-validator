@@ -12,7 +12,9 @@ function stripAnsi(s: string): string {
 
 describe("classifyOutcome", () => {
 	it("errors dominate when errorCount > 0", () => {
-		expect(classifyOutcome(2, 5, 10, 17)).toEqual({
+		expect(
+			classifyOutcome({ errorCount: 2, warningCount: 5, fileCount: 10, ruleCount: 17 }),
+		).toEqual({
 			kind: "errors",
 			errorCount: 2,
 			warningCount: 5,
@@ -20,14 +22,18 @@ describe("classifyOutcome", () => {
 	});
 
 	it("warnings when only warnings", () => {
-		expect(classifyOutcome(0, 3, 10, 17)).toEqual({
+		expect(
+			classifyOutcome({ errorCount: 0, warningCount: 3, fileCount: 10, ruleCount: 17 }),
+		).toEqual({
 			kind: "warnings",
 			warningCount: 3,
 		});
 	});
 
 	it("passed when no violations", () => {
-		expect(classifyOutcome(0, 0, 42, 17)).toEqual({
+		expect(
+			classifyOutcome({ errorCount: 0, warningCount: 0, fileCount: 42, ruleCount: 17 }),
+		).toEqual({
 			kind: "passed",
 			fileCount: 42,
 			ruleCount: 17,

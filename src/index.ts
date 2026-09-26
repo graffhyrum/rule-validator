@@ -19,7 +19,12 @@ export function exitWithResult(
 	warningCount: number,
 	fileCount?: number,
 ): never {
-	const outcome = classifyOutcome(errorCount, warningCount, fileCount ?? 0, RULES.length);
+	const outcome = classifyOutcome({
+		errorCount,
+		warningCount,
+		fileCount: fileCount ?? 0,
+		ruleCount: RULES.length,
+	});
 	if (outcome.kind !== "passed") printSummaryReport(errorCount, warningCount);
 	printRunFooter(outcome);
 	process.exit(outcomeExitCode(outcome));

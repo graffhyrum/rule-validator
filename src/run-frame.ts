@@ -1,10 +1,8 @@
 import pc from "picocolors";
+
 const FRAME_WIDTH = 64;
-/**
- * Terminal verdict of one run. Single source of truth for footer text,
- * footer colour, and process exit code.
- * Invariant: "warnings" implies errorCount === 0 (encoded by omitting errorCount).
- */
+const MIN_RULE_FILL = 3;
+
 export type RunOutcome =
 	| {
 			readonly kind: "passed";
@@ -23,67 +21,73 @@ export type RunOutcome =
 	| {
 			readonly kind: "crashed";
 	  };
+
 export type ExitCode = 0 | 1;
+
+export type OutcomeCounts = {
+	readonly errorCount: number;
+	readonly warningCount: number;
+	readonly fileCount: number;
+	readonly ruleCount: number;
+};
+
 /** Footer, blank line → stdout. Call once, right before exit. */
 export function printRunFooter(outcome: RunOutcome): void {
 	console.log(formatRunFooter(outcome, FRAME_WIDTH));
 	console.log("");
 }
+
 /** Blank line, header, blank line → stdout. */
 export function printRunHeader(): void {
 	console.log("");
 	console.log(formatRunHeader(FRAME_WIDTH));
 	console.log("");
 }
-/** Pure. Footer rule line carrying the verdict. Coloured by outcome. */
+
 export function formatRunFooter(outcome: RunOutcome, width: number): string {
 	switch (outcome.kind) {
 		case "passed":
 			return pc.green(
-				rule(
+				frameRuleLine(
 					`✔ All ${outcome.fileCount} files passed (${outcome.ruleCount} rules checked).`,
 					width,
 				),
 			);
 		case "warnings":
-			return pc.yellow(rule("⚠ Consider fixing warnings for better compliance.", width));
+			return pc.yellow(
+				frameRuleLine("⚠ Consider fixing warnings for better compliance.", width),
+			);
 		case "errors":
-			return pc.red(rule("✖ Fix errors before proceeding.", width));
+			return pc.red(frameRuleLine("✖ Fix errors before proceeding.", width));
 		case "crashed":
-			return pc.red(rule("✖ Run failed.", width));
+			return pc.red(frameRuleLine("✖ Run failed.", width));
 		default: {
 			const _exhaustive: never = outcome;
 			throw new Error(`unhandled outcome: ${JSON.stringify(_exhaustive)}`);
 		}
 	}
 }
-/** Pure. Header rule line (no surrounding blanks). Dim. Tool name only. */
+
 export function formatRunHeader(width: number): string {
-	return pc.dim(rule("rule-validator", width));
+	return pc.dim(frameRuleLine("rule-validator", width));
 }
-/** Pure. Counts → outcome. errors dominate warnings dominate pass. */
-// Four counts are the domain inputs; packing them obscures the call site.
-// eslint-disable-next-line max-params -- domain counts stay positional
+
 export function classifyOutcome(
-	errorCount: number,
-	warningCount: number,
-	fileCount: number,
-	ruleCount: number,
-): Exclude<
-	RunOutcome,
-	{
-		kind: "crashed";
+	counts: OutcomeCounts,
+): Exclude<RunOutcome, { kind: "crashed" }> {
+	if (counts.errorCount > 0) {
+		return {
+			kind: "errors",
+			errorCount: counts.errorCount,
+			warningCount: counts.warningCount,
+		};
 	}
-> {
-	if (errorCount > 0) {
-		return { kind: "errors", errorCount, warningCount };
+	if (counts.warningCount > 0) {
+		return { kind: "warnings", warningCount: counts.warningCount };
 	}
-	if (warningCount > 0) {
-		return { kind: "warnings", warningCount };
-	}
-	return { kind: "passed", fileCount, ruleCount };
+	return { kind: "passed", fileCount: counts.fileCount, ruleCount: counts.ruleCount };
 }
-/** Pure. Exhaustive switch with `never` default. */
+
 export function outcomeExitCode(outcome: RunOutcome): ExitCode {
 	switch (outcome.kind) {
 		case "passed":
@@ -98,8 +102,8 @@ export function outcomeExitCode(outcome: RunOutcome): ExitCode {
 		}
 	}
 }
-/** Build `── ${label} ` then pad with ─ to width (min 3; never truncate label). */
-function rule(label: string, width: number): string {
+
+function frameRuleLine(label: string, width: number): string {
 	const head = `── ${label} `;
-	return `${head}${"─".repeat(Math.max(3, width - head.length))}`;
+	return `${head}${"─".repeat(Math.max(MIN_RULE_FILL, width - head.length))}`;
 }
