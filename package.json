@@ -1,10 +1,10 @@
 {
 	"name": "@graff/rule-validator",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"private": true,
 	"license": "MIT",
 	"bin": {
-		"rule-validator": "./dist/cli.js"
+		"rule-validator": "./src/cli.ts"
 	},
 	"type": "module",
 	"main": "./dist/index.js",
