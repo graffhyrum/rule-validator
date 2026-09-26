@@ -17,7 +17,9 @@ mock.module("./ast-scan.ts", () => ({
 	runAstRules: runAstRulesMock,
 }));
 
+const realConfig = await import("./config.ts");
 mock.module("./config.ts", () => ({
+	...realConfig,
 	loadProjectConfig: mock(async () => ({})),
 }));
 
@@ -97,6 +99,7 @@ describe("CLI main function", () => {
 		const consoleMock = mock(() => {});
 		const originalError = console.error;
 		console.error = consoleMock;
+		const logSpy = spyOn(console, "log").mockImplementation(() => {});
 		const exitSpy = spyOn(process, "exit").mockImplementation((code) => {
 			throw new Error(`exit ${code}`);
 		});
@@ -113,6 +116,24 @@ describe("CLI main function", () => {
 		expect(consoleMock).toHaveBeenCalledWith("Error scanning files:", "scan failed");
 		expect(exitSpy).toHaveBeenCalledWith(1);
 		expect(exitWithResultMock).not.toHaveBeenCalled();
+		const stdout = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
+		expect(stdout).toContain("rule-validator");
+		expect(stdout).toContain("Run failed");
+		expect(stdout).not.toContain("\n\n\n");
+		logSpy.mockRestore();
+	});
+
+	it("human run stdout starts with framed header", async () => {
+		scanFilesMock.mockResolvedValue({ errorCount: 0, warningCount: 0 });
+		const logSpy = spyOn(console, "log").mockImplementation(() => {});
+
+		await main(["node", "cli.ts"]);
+
+		const stdout = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
+		expect(stdout.startsWith("\n")).toBe(true);
+		expect(stdout).toContain("── rule-validator");
+		expect(stdout).not.toContain("\n\n\n");
+		logSpy.mockRestore();
 	});
 });
 
@@ -244,6 +265,8 @@ describe("CLI --json flag", () => {
 		expect(parsed.errorCount).toBe(1);
 		expect(parsed.violations).toHaveLength(1);
 		expect(parsed.violations[0].rule).toBe("test");
+		expect(captured).toHaveLength(1);
+		expect(output).not.toContain("rule-validator");
 	});
 });
 

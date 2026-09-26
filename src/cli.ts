@@ -11,6 +11,7 @@ import {
 	scanFiles,
 } from "./index.ts";
 import { toRelativePosix } from "./paths.ts";
+import { printRunFooter, printRunHeader } from "./run-frame.ts";
 
 const DEFAULT_PATTERN = "**/*.{ts,tsx,js,jsx}";
 
@@ -28,6 +29,7 @@ export async function main(argv?: string[]): Promise<void> {
 	const pattern: string = program.args[0] || DEFAULT_PATTERN;
 
 	try {
+		if (!opts.json) printRunHeader();
 		const config = await loadProjectConfig();
 		const [regex, ast]: [ScanResult, ScanResult] = await Promise.all([
 			scanFiles(pattern, { json: opts.json, config }),
@@ -40,6 +42,7 @@ export async function main(argv?: string[]): Promise<void> {
 		exitWithResult(combined.errorCount, combined.warningCount, combined.fileCount);
 	} catch (error) {
 		console.error("Error scanning files:", error instanceof Error ? error.message : error);
+		if (!opts.json) printRunFooter({ kind: "crashed" });
 		process.exit(1);
 	}
 }
