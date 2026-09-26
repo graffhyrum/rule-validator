@@ -3,6 +3,9 @@ import { unlinkSync, writeFileSync } from "node:fs";
 import type { PrintableViolation, Violation } from "./index";
 import { asRelativePosix } from "./paths.ts";
 
+// Clear mocks left by sibling test files (Bun shares one module cache per run).
+mock.restore();
+
 // Mock RULES module
 const mockRules = [
 	{
@@ -314,6 +317,7 @@ describe("exitWithResult", () => {
 		expect(exitSpy).toHaveBeenCalledWith(1);
 		const output = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
 		expect(output).toContain("Fix errors before proceeding");
+		expect(output).not.toContain("\n\n\n");
 		exitSpy.mockRestore();
 		logSpy.mockRestore();
 	});
@@ -333,6 +337,7 @@ describe("exitWithResult", () => {
 		expect(exitSpy).toHaveBeenCalledWith(0);
 		const output = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
 		expect(output).toContain("Consider fixing warnings");
+		expect(output).not.toContain("\n\n\n");
 		exitSpy.mockRestore();
 		logSpy.mockRestore();
 	});
@@ -353,6 +358,7 @@ describe("exitWithResult", () => {
 		const output = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
 		expect(output).toContain("5 files passed");
 		expect(output).toContain("rules checked");
+		expect(output).not.toContain("\n\n\n");
 		exitSpy.mockRestore();
 		logSpy.mockRestore();
 	});
