@@ -4,6 +4,7 @@ import { isFileExcludedForRule, type ProjectConfig } from "./config.ts";
 import { REGEX_SCAN_DEFAULT_EXCLUDES } from "./exclude-patterns.ts";
 import { type RelativePosixPath, toPosixPath, toRelativePosix } from "./paths.ts";
 import { RULES } from "./rules";
+import { classifyOutcome, outcomeExitCode, printRunFooter } from "./run-frame.ts";
 
 export interface FileReader {
 	readFile(path: string): Promise<string>;
@@ -18,20 +19,10 @@ export function exitWithResult(
 	warningCount: number,
 	fileCount?: number,
 ): never {
-	if (errorCount > 0) {
-		printSummaryReport(errorCount, warningCount);
-		console.log(pc.red("Fix errors before proceeding."));
-		process.exit(1);
-	} else if (warningCount > 0) {
-		printSummaryReport(errorCount, warningCount);
-		console.log(pc.yellow("Consider fixing warnings for better compliance."));
-		process.exit(0);
-	} else {
-		const files = fileCount ?? 0;
-		const rules = RULES.length;
-		console.log(pc.green(`All ${files} files passed (${rules} rules checked).`));
-		process.exit(0);
-	}
+	const outcome = classifyOutcome(errorCount, warningCount, fileCount ?? 0, RULES.length);
+	if (outcome.kind !== "passed") printSummaryReport(errorCount, warningCount);
+	printRunFooter(outcome);
+	process.exit(outcomeExitCode(outcome));
 }
 export async function scanFiles(
 	pattern: string,
@@ -206,7 +197,7 @@ export function printSummaryReport(errorCount: number, warningCount: number): vo
 	const errors = errorCount > 0 ? pc.red(`${errorCount} errors`) : `${errorCount} errors`;
 	const warnings =
 		warningCount > 0 ? pc.yellow(`${warningCount} warnings`) : `${warningCount} warnings`;
-	console.log(`\n${pc.bold(`${total} violations`)} (${errors}, ${warnings})`);
+	console.log(`${pc.bold(`${total} violations`)} (${errors}, ${warnings})`);
 }
 export interface Rule {
 	name: string;
