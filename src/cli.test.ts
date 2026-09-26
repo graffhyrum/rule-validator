@@ -17,9 +17,10 @@ mock.module("./ast-scan.ts", () => ({
 	runAstRules: runAstRulesMock,
 }));
 
+const realConfig = await import("./config.ts");
 mock.module("./config.ts", () => ({
+	...realConfig,
 	loadProjectConfig: mock(async () => ({})),
-	isFileExcludedForRule: () => false,
 }));
 
 const { main } = await import("./cli.ts");
