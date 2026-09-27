@@ -1,14 +1,12 @@
 // Tests for project config loading, validation, and exclusion integration
 // Covers: discovery, merging, per-rule exclusions, error cases, scan integration
-import { afterEach, describe, expect, it } from "bun:test";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { afterEach, describe, expect, it, spyOn } from "bun:test";
+import { mkdirSync, promises as fsPromises, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { loadProjectConfig } from "./config.ts";
+import { scanFile, scanFiles } from "./index.ts";
 import { toRelativePosix } from "./paths.ts";
-
-// ?fresh: bypass cli.test.ts mock.module of ./config.ts and ./index.ts
-const { loadProjectConfig } = (await import("./config.ts?fresh" as never)) as typeof import("./config.ts");
-const { scanFile, scanFiles } = (await import("./index.ts?fresh" as never)) as typeof import("./index.ts");
 
 function makeTempDir(): string {
 	const dir = path.join(os.tmpdir(), `rv-config-test-${Date.now()}`);
@@ -66,6 +64,24 @@ describe("loadProjectConfig", () => {
 		);
 		const config = await loadProjectConfig(subDir);
 		expect(config.exclude).toEqual(["found/**"]);
+	});
+
+	it("rethrows an access error that is not ENOENT", async () => {
+		tmpDir = path.join(os.tmpdir(), `rv-eacces-${Date.now()}`);
+		mkdirSync(tmpDir, { recursive: true });
+		const realAccess = fsPromises.access.bind(fsPromises);
+		const denied = Object.assign(new Error("denied"), { code: "EACCES" });
+		const accessSpy = spyOn(fsPromises, "access").mockImplementation(async (target) => {
+			if (String(target).includes("rv-eacces-")) {
+				throw denied;
+			}
+			return realAccess(target);
+		});
+		try {
+			await expect(loadProjectConfig(tmpDir)).rejects.toThrow("denied");
+		} finally {
+			accessSpy.mockRestore();
+		}
 	});
 
 	it("throws a clear error for invalid JSON", async () => {

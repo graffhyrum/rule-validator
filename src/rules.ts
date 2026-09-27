@@ -1,4 +1,12 @@
-import type { Rule } from "./index.js";
+import type { Severity } from "./rules/rule.ts";
+
+export interface Rule {
+	name: string;
+	pattern: RegExp;
+	message: string;
+	severity: Severity;
+	fileGuard?: (content: string) => boolean;
+}
 
 export const RULES: Rule[] = [
 	{

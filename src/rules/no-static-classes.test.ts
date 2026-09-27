@@ -125,6 +125,24 @@ describe("no-static-classes rule", () => {
 		expect(testFileResults.length).toBe(0);
 	});
 
+	it("still flags a static-only class that also has a static block and an index signature", () => {
+		const analyzer = createTestSourceFile(`
+			class Utils {
+				static add(): number {
+					return 1;
+				}
+				static {
+					const ready = true;
+				}
+				[key: string]: unknown;
+			}
+		`);
+		const results = runRules({ analyzer, rules: [noStaticClassesRule] });
+		const testFileResults = results.filter((r) => r.file === "test.ts");
+		expect(testFileResults.length).toBe(1);
+		expect(testFileResults[0]?.violations.length).toBe(1);
+	});
+
 	it("should not flag a class with all static members plus one instance method", () => {
 		const analyzer = createTestSourceFile(`
 			class Hybrid {
