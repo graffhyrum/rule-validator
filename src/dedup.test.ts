@@ -81,7 +81,7 @@ describe("deduplicateDisplayViolations", () => {
 	it("normalizes absolute file path to relative", () => {
 		const abs = makeDisplay({ file: asRelativePosix(path.join(process.cwd(), "src", "foo.ts")) });
 		const result = deduplicateDisplayViolations([abs], []);
-		expect(result[0]?.file as string).toBe("src/foo.ts");
+		expect(result[0]?.file).toBe(asRelativePosix("src/foo.ts"));
 	});
 });
 
@@ -105,7 +105,7 @@ describe("deduplicateJsonViolations", () => {
 		const ast = makeJson({ match: "ast-match" });
 		const result = deduplicateJsonViolations([regex], [ast]);
 		expect(result).toHaveLength(1);
-		expect((result[0] as JsonViolation).match).toBe("regex-match");
+		expect(result[0]?.match).toBe("regex-match");
 	});
 
 	it("AST entry kept when no regex collision", () => {
@@ -119,6 +119,6 @@ describe("deduplicateJsonViolations", () => {
 		const slash = makeJson({ file: asRelativePosix("src\\foo.ts"), match: "other" });
 		const result = deduplicateJsonViolations([abs], [slash]);
 		expect(result).toHaveLength(1);
-		expect(result[0]?.file as string).toBe("src/foo.ts");
+		expect(result[0]?.file).toBe(asRelativePosix("src/foo.ts"));
 	});
 });
