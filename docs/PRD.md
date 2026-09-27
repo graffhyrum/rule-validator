@@ -256,12 +256,12 @@ import { scanFiles, Violation } from "@graff/rule-validator";
 
 ## Appendix: Current Rules
 
-| Rule                   | Pattern                                  | Description                             |
-| ---------------------- | ---------------------------------------- | --------------------------------------- | ---------------------------------------- |
-| no-waitForTimeout      | `/\bwaitForTimeout\s*\(/g`               | Avoid static timeouts, use auto-waiting |
-| no-any-types           | `/:\s*any\b/g`                           | No `any` types, use proper typing       |
-| template-literals-only | `/"\s*\+\s*"                             | "\S+"\s*\+\s*\S+/g`                     | Use template literals, not string concat |
-| no-static-classes      | `/export\s+class\s+\w+Impl/g`            | Avoid static-only classes               |
-| no-unknown-as-cast     | `/ as unknown as\b/g`                    | Ban double cast through unknown         |
-| no-expect-typeof-tobe  | `/expect\s*\(\s*typeof.+\)\.toBe\s*\(/g` | Ban typeof assertions                   |
-| no-toBeInstanceOf      | `/\.toBeInstanceOf\s*\(/g`               | Ban constructor assertions              |
+| Rule                   | Pattern                                  | Description                              |
+| ---------------------- | ---------------------------------------- | ---------------------------------------- |
+| no-waitForTimeout      | `/\bwaitForTimeout\s*\(/g`               | Avoid static timeouts, use auto-waiting  |
+| no-any-types           | `/:\s*any\b/g`                           | No `any` types, use proper typing        |
+| template-literals-only | `/"\s*\+\s*"\|"\S+"\s*\+\s*\S+/g`        | Use template literals, not string concat |
+| no-static-classes      | `/export\s+class\s+\w+Impl/g`            | Avoid static-only classes                |
+| no-unknown-as-cast     | `/ as unknown as\b/g`                    | Ban double cast through unknown          |
+| no-expect-typeof-tobe  | `/expect\s*\(\s*typeof.+\)\.toBe\s*\(/g` | Ban typeof assertions                    |
+| no-toBeInstanceOf      | `/\.toBeInstanceOf\s*\(/g`               | Ban constructor assertions               |
