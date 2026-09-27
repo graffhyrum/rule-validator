@@ -4,6 +4,7 @@ import {
 	formatRunFooter,
 	formatRunHeader,
 	outcomeExitCode,
+	type RunOutcome,
 } from "./run-frame.ts";
 
 function stripAnsi(s: string): string {
@@ -89,5 +90,11 @@ describe("formatRunFooter", () => {
 		expect(stripAnsi(formatRunFooter({ kind: "crashed" }, 40))).toContain(
 			"✖ Run failed.",
 		);
+	});
+
+	it("throws when the kind is outside the outcome union", () => {
+		const outcome: RunOutcome = JSON.parse('{"kind":"other"}');
+		expect(() => formatRunFooter(outcome, 40)).toThrow("unhandled outcome");
+		expect(() => outcomeExitCode(outcome)).toThrow("unhandled outcome");
 	});
 });

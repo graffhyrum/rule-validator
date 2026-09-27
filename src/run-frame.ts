@@ -59,10 +59,8 @@ export function formatRunFooter(outcome: RunOutcome, width: number): string {
 			return pc.red(frameRuleLine("✖ Fix errors before proceeding.", width));
 		case "crashed":
 			return pc.red(frameRuleLine("✖ Run failed.", width));
-		default: {
-			const _exhaustive: never = outcome;
-			throw new Error(`unhandled outcome: ${JSON.stringify(_exhaustive)}`);
-		}
+		default:
+			return rejectOutcome(outcome);
 	}
 }
 
@@ -92,11 +90,13 @@ export function outcomeExitCode(outcome: RunOutcome): ExitCode {
 		case "errors":
 		case "crashed":
 			return 1;
-		default: {
-			const _exhaustive: never = outcome;
-			throw new Error(`unhandled outcome: ${JSON.stringify(_exhaustive)}`);
-		}
+		default:
+			return rejectOutcome(outcome);
 	}
+}
+
+function rejectOutcome(outcome: never): never {
+	throw new Error(`unhandled outcome: ${JSON.stringify(outcome)}`);
 }
 
 function frameRuleLine(label: string, width: number): string {
