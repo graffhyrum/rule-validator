@@ -1,13 +1,15 @@
 #!/usr/bin/env bun
 import { createCommand } from "commander";
 import packageJson from "../package.json";
-import { runAstRules } from "./ast-scan.ts";
-import { loadProjectConfig } from "./config.ts";
+import { type AstScanOptions, runAstRules } from "./ast-scan.ts";
+import { loadProjectConfig, type ProjectConfig } from "./config.ts";
 import {
 	type DisplayViolation,
 	exitWithResult,
 	type JsonViolation,
+	type PrintableViolation,
 	printViolations,
+	type ScanOptions,
 	type ScanResult,
 	scanFiles,
 } from "./index.ts";
@@ -16,6 +18,22 @@ import { printRunFooter, printRunHeader } from "./run-frame.ts";
 
 const DEFAULT_PATTERN = "**/*.{ts,tsx,js,jsx}";
 
+export interface CliDeps {
+	loadProjectConfig: (startDir?: string) => Promise<ProjectConfig>;
+	scanFiles: (pattern: string, options?: ScanOptions) => Promise<ScanResult>;
+	runAstRules: (pattern: string, options?: AstScanOptions) => Promise<ScanResult>;
+	printViolations: (file: string, violations: PrintableViolation[]) => void;
+	exitWithResult: (errorCount: number, warningCount: number, fileCount?: number) => never;
+}
+
+const defaultDeps: CliDeps = {
+	loadProjectConfig,
+	scanFiles,
+	runAstRules,
+	printViolations,
+	exitWithResult,
+};
+
 type CombinedScanResult = {
 	errorCount: number;
 	warningCount: number;
@@ -23,7 +41,7 @@ type CombinedScanResult = {
 	violations: JsonViolation[] | DisplayViolation[];
 };
 
-export async function main(argv?: string[]): Promise<void> {
+export async function main(argv?: string[], deps: CliDeps = defaultDeps): Promise<void> {
 	const program = buildProgram();
 	program.parse(argv ?? process.argv);
 	const opts = program.opts<{ json?: boolean }>();
@@ -31,41 +49,57 @@ export async function main(argv?: string[]): Promise<void> {
 
 	try {
 		if (!opts.json) printRunHeader();
-		const config = await loadProjectConfig();
+		const config = await deps.loadProjectConfig();
 		const [regex, ast]: [ScanResult, ScanResult] = await Promise.all([
-			scanFiles(pattern, { json: opts.json, config }),
-			runAstRules(pattern, { json: opts.json, config }),
+			deps.scanFiles(pattern, { json: opts.json, config }),
+			deps.runAstRules(pattern, { json: opts.json, config }),
 		]);
-		const combined = deduplicateAndPrint(regex, ast, !opts.json);
+		const combined = deduplicateAndPrint(regex, ast, {
+			shouldPrint: !opts.json,
+			printViolations: deps.printViolations,
+		});
 		if (opts.json) {
 			outputJsonAndExit(combined);
 		}
-		exitWithResult(combined.errorCount, combined.warningCount, combined.fileCount);
+		deps.exitWithResult(combined.errorCount, combined.warningCount, combined.fileCount);
 	} catch (error) {
-		console.error("Error scanning files:", error instanceof Error ? error.message : error);
+		console.error("Error scanning files:", errorText(error));
 		if (!opts.json) printRunFooter({ kind: "crashed" });
 		process.exit(1);
 	}
 }
 
-if (import.meta.main) {
+export async function guardEntry(entry: () => Promise<void>): Promise<void> {
 	try {
-		await main();
-	} catch (e) {
-		console.error(e instanceof Error ? e.message : e);
+		await entry();
+	} catch (error) {
+		console.error(errorText(error));
 		process.exit(1);
 	}
+}
+
+export function errorText(error: unknown): string {
+	if (error instanceof Error) {
+		return error.message;
+	}
+	return String(error);
+}
+
+if (import.meta.main) {
+	await guardEntry(main);
 }
 
 function deduplicateAndPrint(
 	regex: ScanResult,
 	ast: ScanResult,
-	shouldPrint: boolean = true,
+	output: { shouldPrint: boolean; printViolations: CliDeps["printViolations"] },
 ): CombinedScanResult {
 	const regexDisplay = regex.displayViolations ?? [];
 	const astDisplay = ast.displayViolations ?? [];
 	const dedupedDisplay = deduplicateDisplayViolations(regexDisplay, astDisplay);
-	if (shouldPrint && dedupedDisplay.length > 0) printDedupedDisplay(dedupedDisplay);
+	if (output.shouldPrint && dedupedDisplay.length > 0) {
+		printDedupedDisplay(dedupedDisplay, output.printViolations);
+	}
 	const regexViolations = regex.violations ?? [];
 	const astViolations = ast.violations ?? [];
 	const dedupedJson = deduplicateJsonViolations(regexViolations, astViolations);
@@ -117,7 +151,10 @@ export function deduplicateDisplayViolations(
 	return Array.from(deduped.values());
 }
 
-function printDedupedDisplay(violations: DisplayViolation[]): void {
+function printDedupedDisplay(
+	violations: DisplayViolation[],
+	print: CliDeps["printViolations"],
+): void {
 	const sorted = [...violations].sort((a, b) => {
 		if (a.file !== b.file) return a.file.localeCompare(b.file);
 		if (a.line !== b.line) return a.line - b.line;
@@ -137,7 +174,7 @@ function printDedupedDisplay(violations: DisplayViolation[]): void {
 			match: v.match,
 			sourceLine: v.sourceLine,
 		}));
-		printViolations(file, printable);
+		print(file, printable);
 	}
 }
 
