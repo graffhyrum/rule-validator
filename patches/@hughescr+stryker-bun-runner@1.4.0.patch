@@ -1,0 +1,26 @@
+diff --git a/dist/index.js b/dist/index.js
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -5573,7 +5573,8 @@ async function generatePreloadScript(options) {
+   const template = await readFile(templatePath, "utf8");
+   const preloadLogicPath = isBundled ? path.join(__dirname2, "coverage/preload-logic.js") : path.join(__dirname2, "preload-logic.ts");
+   const eagerModules = options.eagerModules ?? [];
+-  const content = template.replace("__PRELOAD_LOGIC_PATH__", preloadLogicPath).replace("__EAGER_MODULES__", JSON.stringify(eagerModules));
++  const preloadLogicSpecifier = preloadLogicPath.replaceAll("\\", "/");
++  const content = template.replace("__PRELOAD_LOGIC_PATH__", preloadLogicSpecifier).replace("__EAGER_MODULES__", JSON.stringify(eagerModules));
+   await writeFile(preloadPath, content, "utf8");
+   return preloadPath;
+ }
+@@ -6762,10 +6763,11 @@ async function spawnBunTests(options, spawnDepth) {
+     if (options.signal?.aborted) {
+       resolve({ stdout: "", stderr: "", exitCode: null, timedOut: true, memoryLimitExceeded: false });
+       return;
+     }
+     const spawnOpts = {
+       env,
+       stdio: ["ignore", "pipe", "pipe"],
+       cwd: process.cwd(),
+-      detached: true
++      detached: process.platform !== "win32",
++      windowsHide: true
+     };

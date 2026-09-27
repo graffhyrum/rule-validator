@@ -109,6 +109,8 @@ Read all imported type files before designing loop structures involving context 
 
 Run `bun fastvet` (build + typecheck + lint + test) before closing any bead or declaring done.
 `bun test` alone does not catch TypeScript errors or lint violations.
+Mutation testing is `bun run test:mutate` (`stryker run`, config `stryker.conf.mjs`). It is not part of `bun fastvet`.
+Do not add `src/config.ts` to the mutate set: instrumentation changes the `ENOTDIR` path, and the dry run then returns `{}` instead of throwing.
 Run `/simplify` before committing. The `PostToolUse` UBS hook catches security issues;
 `/simplify` catches redundancy and quality issues that static analysis misses.
 
