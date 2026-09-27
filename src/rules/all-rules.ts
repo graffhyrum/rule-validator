@@ -1,4 +1,5 @@
 import { preferBunFileIoRule } from "../packages/file-io/index.ts";
+import { arktypeSchemaStringsRule } from "./arktype-schema-strings.js";
 import { noExpectTypeofToBeRule } from "./no-expect-typeof-tobe.js";
 import { noNonNullAssertionRule } from "./no-non-null-assertion.js";
 import { noStaticClassesRule } from "./no-static-classes.js";
@@ -7,11 +8,13 @@ import { noUnknownAsCastRule } from "./no-unknown-as-cast.js";
 import { noWaitForTimeoutRule } from "./no-wait-for-timeout.js";
 import type { ASTRule } from "./rule.js";
 import { templateLiteralsOnlyRule } from "./template-literals-only.js";
+import { typePredicateNameRule } from "./type-predicate-name.js";
 
 // `no-raw-response-in-elysia` is intentionally absent here: detecting `new Response()`
 // (excluding proc.stdout) is a structural surface-pattern that regex handles reliably
 // without needing scope, type, or control-flow information from a full AST walk.
 export const AST_RULES: ASTRule[] = [
+	arktypeSchemaStringsRule,
 	noExpectTypeofToBeRule,
 	noNonNullAssertionRule,
 	noStaticClassesRule,
@@ -20,4 +23,5 @@ export const AST_RULES: ASTRule[] = [
 	noWaitForTimeoutRule,
 	preferBunFileIoRule,
 	templateLiteralsOnlyRule,
+	typePredicateNameRule,
 ];
