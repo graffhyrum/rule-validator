@@ -1,6 +1,7 @@
 // Integration test for the AST pipeline against known-bad.ts fixture.
 // Bypasses runAstRules() to avoid the default __fixtures__ exclusion.
-import { beforeAll, describe, expect, it, mock } from "bun:test";
+import { beforeAll, describe, expect, it } from "bun:test";
+import { runAstRules } from "./ast-scan.ts";
 import { AST_RULES } from "./rules/all-rules.ts";
 import type { RuleResult } from "./rules/runner.ts";
 import { runRules } from "./rules/runner.ts";
@@ -8,10 +9,7 @@ import { createAnalyzer } from "./typescript/compiler.ts";
 
 const FIXTURE_PATTERN = "src/rules/__fixtures__/known-bad.ts";
 
-type RunAstRulesFn = typeof import("./ast-scan.ts")["runAstRules"];
-type RunAstRulesResult = Awaited<ReturnType<RunAstRulesFn>>;
-
-let runAstRules: RunAstRulesFn;
+type RunAstRulesResult = Awaited<ReturnType<typeof runAstRules>>;
 
 async function scanFixture(): Promise<RuleResult[]> {
 	const analyzer = await createAnalyzer({ pattern: FIXTURE_PATTERN });
@@ -23,9 +21,6 @@ describe("runAstRules", () => {
 	let jsonResult: RunAstRulesResult;
 
 	beforeAll(async () => {
-		mock.restore();
-		const mod = (await import("./ast-scan.ts?fresh" as never)) as typeof import("./ast-scan.ts");
-		runAstRules = mod.runAstRules;
 		emptyExcludeResult = await runAstRules(FIXTURE_PATTERN, { excludePatterns: [] });
 		jsonResult = await runAstRules(FIXTURE_PATTERN, { excludePatterns: [], json: true });
 	});

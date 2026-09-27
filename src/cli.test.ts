@@ -1,71 +1,70 @@
-import { afterAll, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import { type CliDeps, guardEntry, main } from "./cli.ts";
 
-const scanFilesMock = mock();
-const exitWithResultMock = mock();
-const runAstRulesMock = mock();
-const printViolationsMock = mock((file: unknown) => {
+const scanFiles = mock();
+const exitWithResult = mock();
+const runAstRules = mock();
+const printViolations = mock((file: unknown) => {
 	console.log(file);
 });
+const loadProjectConfig = mock();
 
-mock.module("./index.ts", () => ({
-	scanFiles: scanFilesMock,
-	exitWithResult: exitWithResultMock,
-	printViolations: printViolationsMock,
-}));
+const deps = {
+	scanFiles,
+	exitWithResult,
+	runAstRules,
+	printViolations,
+	loadProjectConfig,
+} as unknown as CliDeps;
 
-mock.module("./ast-scan.ts", () => ({
-	runAstRules: runAstRulesMock,
-}));
+function run(argv: string[]): Promise<void> {
+	return main(argv, deps);
+}
 
-const realConfig = (await import("./config.ts?fresh" as never)) as typeof import("./config.ts");
-mock.module("./config.ts", () => ({
-	...realConfig,
-	loadProjectConfig: mock(async () => ({})),
-	isFileExcludedForRule: realConfig.isFileExcludedForRule,
-}));
-
-const { main } = await import("./cli.ts");
-
-afterAll(() => mock.restore());
+function thrownMessage(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
+}
 
 beforeEach(() => {
-	scanFilesMock.mockClear();
-	exitWithResultMock.mockClear();
-	runAstRulesMock.mockClear();
-	printViolationsMock.mockClear();
-	runAstRulesMock.mockResolvedValue({ errorCount: 0, warningCount: 0 });
+	scanFiles.mockClear();
+	exitWithResult.mockClear();
+	runAstRules.mockClear();
+	printViolations.mockClear();
+	loadProjectConfig.mockClear();
+	loadProjectConfig.mockResolvedValue({});
+	runAstRules.mockResolvedValue({ errorCount: 0, warningCount: 0 });
 });
 
 describe("CLI main function", () => {
 	it("should use default pattern when no args and handle successful scan", async () => {
-		scanFilesMock.mockResolvedValue({ errorCount: 0, warningCount: 0 });
+		scanFiles.mockResolvedValue({ errorCount: 0, warningCount: 0 });
 
-		await main(["node", "cli.ts"]);
+		await run(["node", "cli.ts"]);
 
-		expect(scanFilesMock).toHaveBeenCalledWith("**/*.{ts,tsx,js,jsx}", { json: undefined, config: {} });
-		expect(exitWithResultMock).toHaveBeenCalledWith(0, 0, 0);
+		expect(scanFiles).toHaveBeenCalledWith("**/*.{ts,tsx,js,jsx}", { json: undefined, config: {} });
+		expect(exitWithResult).toHaveBeenCalledWith(0, 0, 0);
 	});
 
 	it("should use provided pattern and handle successful scan with errors and warnings", async () => {
-		scanFilesMock.mockResolvedValue({ errorCount: 1, warningCount: 2 });
+		scanFiles.mockResolvedValue({ errorCount: 1, warningCount: 2 });
 
-		await main(["node", "cli.ts", "src/**/*.ts"]);
+		await run(["node", "cli.ts", "src/**/*.ts"]);
 
-		expect(scanFilesMock).toHaveBeenCalledWith("src/**/*.ts", { json: undefined, config: {} });
-		expect(exitWithResultMock).toHaveBeenCalledWith(1, 2, 0);
+		expect(scanFiles).toHaveBeenCalledWith("src/**/*.ts", { json: undefined, config: {} });
+		expect(exitWithResult).toHaveBeenCalledWith(1, 2, 0);
 	});
 
 	it("should combine regex and AST rule results", async () => {
-		scanFilesMock.mockResolvedValue({ errorCount: 1, warningCount: 0, fileCount: 5 });
-		runAstRulesMock.mockResolvedValue({ errorCount: 2, warningCount: 3, fileCount: 3 });
+		scanFiles.mockResolvedValue({ errorCount: 1, warningCount: 0, fileCount: 5 });
+		runAstRules.mockResolvedValue({ errorCount: 2, warningCount: 3, fileCount: 3 });
 
-		await main(["node", "cli.ts"]);
+		await run(["node", "cli.ts"]);
 
-		expect(exitWithResultMock).toHaveBeenCalledWith(3, 3, 8);
+		expect(exitWithResult).toHaveBeenCalledWith(3, 3, 8);
 	});
 
 	it("should print display violations via printDedupedDisplay when present", async () => {
-		scanFilesMock.mockResolvedValue({
+		scanFiles.mockResolvedValue({
 			errorCount: 1,
 			warningCount: 0,
 			displayViolations: [
@@ -82,20 +81,20 @@ describe("CLI main function", () => {
 		const logSpy = spyOn(console, "log").mockImplementation(() => {});
 
 		try {
-			await main(["node", "cli.ts"]);
+			await run(["node", "cli.ts"]);
 		} catch {
 			// expected if exitWithResult is not mocked to throw
 		}
 
 		const output = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
 		expect(output).toContain("src/foo.ts");
-		expect(exitWithResultMock).toHaveBeenCalledWith(1, 0, 0);
+		expect(exitWithResult).toHaveBeenCalledWith(1, 0, 0);
 		logSpy.mockRestore();
 	});
 
 	it("should handle error in scanFiles", async () => {
 		const error = new Error("scan failed");
-		scanFilesMock.mockRejectedValue(error);
+		scanFiles.mockRejectedValue(error);
 
 		const consoleMock = mock(() => {});
 		const originalError = console.error;
@@ -106,10 +105,10 @@ describe("CLI main function", () => {
 		});
 
 		try {
-			await main(["node", "cli.ts"]);
+			await run(["node", "cli.ts"]);
 			expect(true).toBe(false);
 		} catch (e) {
-			expect((e as Error).message).toBe("exit 1");
+			expect(thrownMessage(e)).toBe("exit 1");
 		} finally {
 			console.error = originalError;
 		}
@@ -117,7 +116,7 @@ describe("CLI main function", () => {
 		try {
 			expect(consoleMock).toHaveBeenCalledWith("Error scanning files:", "scan failed");
 			expect(exitSpy).toHaveBeenCalledWith(1);
-			expect(exitWithResultMock).not.toHaveBeenCalled();
+			expect(exitWithResult).not.toHaveBeenCalled();
 			const stdout = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
 			expect(stdout).toContain("rule-validator");
 			expect(stdout).toContain("Run failed");
@@ -129,10 +128,10 @@ describe("CLI main function", () => {
 	});
 
 	it("human run stdout starts with framed header", async () => {
-		scanFilesMock.mockResolvedValue({ errorCount: 0, warningCount: 0 });
+		scanFiles.mockResolvedValue({ errorCount: 0, warningCount: 0 });
 		const logSpy = spyOn(console, "log").mockImplementation(() => {});
 
-		await main(["node", "cli.ts"]);
+		await run(["node", "cli.ts"]);
 
 		const stdout = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
 		expect(stdout.startsWith("\n")).toBe(true);
@@ -158,9 +157,9 @@ describe("CLI --version flag", () => {
 		});
 
 		try {
-			await main(["node", "cli.ts", "--version"]);
+			await run(["node", "cli.ts", "--version"]);
 		} catch (e) {
-			expect((e as Error).message).toBe("exit 0");
+			expect(thrownMessage(e)).toBe("exit 0");
 		} finally {
 			process.stdout.write = originalWrite;
 		}
@@ -189,9 +188,9 @@ describe("CLI --version flag", () => {
 		});
 
 		try {
-			await main(["node", "cli.ts", "-V"]);
+			await run(["node", "cli.ts", "-V"]);
 		} catch (e) {
-			expect((e as Error).message).toBe("exit 0");
+			expect(thrownMessage(e)).toBe("exit 0");
 		} finally {
 			process.stdout.write = originalWrite;
 			exitSpy.mockRestore();
@@ -217,9 +216,9 @@ describe("CLI --help flag", () => {
 		});
 
 		try {
-			await main(["node", "cli.ts", "--help"]);
+			await run(["node", "cli.ts", "--help"]);
 		} catch (e) {
-			expect((e as Error).message).toBe("exit 0");
+			expect(thrownMessage(e)).toBe("exit 0");
 		} finally {
 			process.stdout.write = originalWrite;
 		}
@@ -239,7 +238,7 @@ describe("CLI --help flag", () => {
 
 describe("CLI --json flag", () => {
 	it("--json should output JSON format", async () => {
-		scanFilesMock.mockResolvedValue({
+		scanFiles.mockResolvedValue({
 			errorCount: 1,
 			warningCount: 0,
 			violations: [
@@ -254,7 +253,7 @@ describe("CLI --json flag", () => {
 				},
 			],
 		});
-		runAstRulesMock.mockResolvedValue({ errorCount: 0, warningCount: 0, violations: [] });
+		runAstRules.mockResolvedValue({ errorCount: 0, warningCount: 0, violations: [] });
 
 		const captured: string[] = [];
 		const logMock = mock((...args: unknown[]) => {
@@ -267,9 +266,9 @@ describe("CLI --json flag", () => {
 		});
 
 		try {
-			await main(["node", "cli.ts", "--json"]);
+			await run(["node", "cli.ts", "--json"]);
 		} catch (e) {
-			expect((e as Error).message).toBe("exit 1");
+			expect(thrownMessage(e)).toBe("exit 1");
 		} finally {
 			console.log = originalLog;
 			exitSpy.mockRestore();
@@ -287,7 +286,7 @@ describe("CLI --json flag", () => {
 
 describe("countFromJsonViolations path via deduplicateAndPrint", () => {
 	it("counts errors and warnings from json violations when no display violations are present", async () => {
-		scanFilesMock.mockResolvedValue({
+		scanFiles.mockResolvedValue({
 			errorCount: 0,
 			warningCount: 0,
 			violations: [
@@ -295,15 +294,15 @@ describe("countFromJsonViolations path via deduplicateAndPrint", () => {
 				{ file: "a.ts", line: 2, column: 1, rule: "rule-b", message: "msg", severity: "warning", match: "y" },
 			],
 		});
-		runAstRulesMock.mockResolvedValue({ errorCount: 0, warningCount: 0, violations: [] });
+		runAstRules.mockResolvedValue({ errorCount: 0, warningCount: 0, violations: [] });
 
-		await main(["node", "cli.ts"]);
+		await run(["node", "cli.ts"]);
 
-		expect(exitWithResultMock).toHaveBeenCalledWith(1, 1, 0);
+		expect(exitWithResult).toHaveBeenCalledWith(1, 1, 0);
 	});
 
 	it("counts only errors from json violations with no display violations", async () => {
-		scanFilesMock.mockResolvedValue({
+		scanFiles.mockResolvedValue({
 			errorCount: 0,
 			warningCount: 0,
 			violations: [
@@ -311,17 +310,17 @@ describe("countFromJsonViolations path via deduplicateAndPrint", () => {
 				{ file: "b.ts", line: 6, column: 3, rule: "rule-d", message: "msg", severity: "error", match: "w" },
 			],
 		});
-		runAstRulesMock.mockResolvedValue({ errorCount: 0, warningCount: 0, violations: [] });
+		runAstRules.mockResolvedValue({ errorCount: 0, warningCount: 0, violations: [] });
 
-		await main(["node", "cli.ts"]);
+		await run(["node", "cli.ts"]);
 
-		expect(exitWithResultMock).toHaveBeenCalledWith(2, 0, 0);
+		expect(exitWithResult).toHaveBeenCalledWith(2, 0, 0);
 	});
 });
 
 describe("printDedupedDisplay sort comparator branches", () => {
 	it("sorts violations from different files alphabetically (a.file !== b.file branch)", async () => {
-		scanFilesMock.mockResolvedValue({
+		scanFiles.mockResolvedValue({
 			errorCount: 2,
 			warningCount: 0,
 			displayViolations: [
@@ -341,12 +340,12 @@ describe("printDedupedDisplay sort comparator branches", () => {
 				},
 			],
 		});
-		runAstRulesMock.mockResolvedValue({ errorCount: 0, warningCount: 0 });
+		runAstRules.mockResolvedValue({ errorCount: 0, warningCount: 0 });
 
 		const logSpy = spyOn(console, "log").mockImplementation(() => {});
 
 		try {
-			await main(["node", "cli.ts"]);
+			await run(["node", "cli.ts"]);
 		} catch {
 			// expected if exitWithResult throws
 		}
@@ -358,7 +357,7 @@ describe("printDedupedDisplay sort comparator branches", () => {
 	});
 
 	it("sorts violations from the same file by line number (a.line !== b.line branch)", async () => {
-		scanFilesMock.mockResolvedValue({
+		scanFiles.mockResolvedValue({
 			errorCount: 2,
 			warningCount: 0,
 			displayViolations: [
@@ -378,12 +377,12 @@ describe("printDedupedDisplay sort comparator branches", () => {
 				},
 			],
 		});
-		runAstRulesMock.mockResolvedValue({ errorCount: 0, warningCount: 0 });
+		runAstRules.mockResolvedValue({ errorCount: 0, warningCount: 0 });
 
 		const logSpy = spyOn(console, "log").mockImplementation(() => {});
 
 		try {
-			await main(["node", "cli.ts"]);
+			await run(["node", "cli.ts"]);
 		} catch {
 			// expected if exitWithResult throws
 		}
@@ -392,5 +391,88 @@ describe("printDedupedDisplay sort comparator branches", () => {
 		const lineNumbers = calls.filter((s) => s.includes("same.ts") || s.match(/^\s*\d+/));
 		expect(lineNumbers.length).toBeGreaterThan(0);
 		logSpy.mockRestore();
+	});
+
+	it("sorts violations on the same line by column", async () => {
+		scanFiles.mockResolvedValue({
+			errorCount: 2,
+			warningCount: 0,
+			displayViolations: [
+				{
+					file: "same.ts",
+					line: 5,
+					column: 20,
+					rule: { name: "rule-a", message: "error", severity: "error" },
+					match: "late",
+				},
+				{
+					file: "same.ts",
+					line: 5,
+					column: 3,
+					rule: { name: "rule-b", message: "error", severity: "error" },
+					match: "early",
+				},
+			],
+		});
+		runAstRules.mockResolvedValue({ errorCount: 0, warningCount: 0 });
+
+		try {
+			await run(["node", "cli.ts"]);
+		} catch {
+			// expected if exitWithResult throws
+		}
+
+		expect(printViolations).toHaveBeenCalledWith("same.ts", [
+			expect.objectContaining({ line: 5, column: 3 }),
+			expect.objectContaining({ line: 5, column: 20 }),
+		]);
+	});
+});
+
+describe("guardEntry", () => {
+	it("returns when the entry resolves", async () => {
+		await guardEntry(async () => {});
+	});
+
+	it("prints an Error message and exits 1", async () => {
+		const errorSpy = spyOn(console, "error").mockImplementation(() => {});
+		const exitSpy = spyOn(process, "exit").mockImplementation((code) => {
+			throw new Error(`exit ${code}`);
+		});
+
+		try {
+			await guardEntry(async () => {
+				throw new Error("boom");
+			});
+			expect(true).toBe(false);
+		} catch (e) {
+			expect(thrownMessage(e)).toBe("exit 1");
+		}
+
+		expect(errorSpy).toHaveBeenCalledWith("boom");
+		expect(exitSpy).toHaveBeenCalledWith(1);
+		errorSpy.mockRestore();
+		exitSpy.mockRestore();
+	});
+
+	it("prints a non-Error failure and exits 1", async () => {
+		const errorSpy = spyOn(console, "error").mockImplementation(() => {});
+		const exitSpy = spyOn(process, "exit").mockImplementation((code) => {
+			throw new Error(`exit ${code}`);
+		});
+
+		try {
+			await guardEntry(async () => {
+				throw "disk full";
+			});
+			expect(true).toBe(false);
+		} catch (e) {
+			expect(thrownMessage(e)).toBe("exit 1");
+		}
+
+		expect(errorSpy).toHaveBeenCalledWith("disk full");
+		expect(exitSpy).toHaveBeenCalledWith(1);
+		errorSpy.mockRestore();
+		exitSpy.mockRestore();
 	});
 });

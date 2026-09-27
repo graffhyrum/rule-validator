@@ -3,7 +3,7 @@ import path from "node:path";
 export type RelativePosixPath = string & { readonly __brand: "RelativePosixPath" };
 
 export function asRelativePosix(p: string): RelativePosixPath {
-	return p as RelativePosixPath;
+	return toPosixPath(p);
 }
 
 export function toRelativePosix(file: string, cwd = process.cwd()): RelativePosixPath {

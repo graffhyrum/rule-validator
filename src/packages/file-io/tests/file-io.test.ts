@@ -1,110 +1,13 @@
 import { describe, expect, it } from "bun:test";
-import * as ts from "typescript";
-import { hasCopyFileFlagsArg } from "./copy-file-flags.js";
-import { collectBindings } from "./fs-file-bindings.js";
-import { fsModuleKind, isFsModuleSpecifier } from "./fs-module-specifiers.js";
-import { preferBunFileIoRule } from "./prefer-bun-file-io.js";
-import {
-	formatMessage,
-	formatReadMessage,
-	isReplaceableFsSymbol,
-} from "./replaceable-fs-symbols.js";
-import { runRules } from "./runner.js";
-import { createTestSourceFile } from "./test-helpers.js";
-import { hasNonBunWriteFlag } from "./write-file-non-bun-flag.js";
+import { runRules } from "../../../rules/runner.ts";
+import { createTestSourceFile } from "../../../rules/test-helpers.ts";
+import { preferBunFileIoRule } from "../index.ts";
 
 function violationsOf(code: string) {
 	const analyzer = createTestSourceFile(code);
 	const results = runRules({ analyzer, rules: [preferBunFileIoRule] });
 	return results.flatMap((r) => r.violations);
 }
-
-function parseCall(code: string): ts.CallExpression {
-	const sf = ts.createSourceFile("t.ts", code, ts.ScriptTarget.Latest, true);
-	let found: ts.CallExpression | undefined;
-	function visit(node: ts.Node): void {
-		if (ts.isCallExpression(node) && found === undefined) {
-			found = node;
-		}
-		ts.forEachChild(node, visit);
-	}
-	visit(sf);
-	if (found === undefined) {
-		throw new Error("no CallExpression");
-	}
-	return found;
-}
-
-describe("fs-module-specifiers", () => {
-	it("recognizes watched modules", () => {
-		expect(isFsModuleSpecifier("node:fs")).toBe(true);
-		expect(isFsModuleSpecifier("fs/promises")).toBe(true);
-		expect(isFsModuleSpecifier("path")).toBe(false);
-		expect(fsModuleKind("node:fs")).toBe("fs");
-		expect(fsModuleKind("node:fs/promises")).toBe("fs-promises");
-	});
-});
-
-describe("replaceable-fs-symbols", () => {
-	it("formatMessage includes suggestion and notes", () => {
-		const msg = formatMessage("existsSync");
-		expect(msg).toContain("Bun.file(path).exists()");
-		expect(msg).toContain("directories");
-	});
-
-	it("formatReadMessage switches on utf8", () => {
-		const utf8 = formatReadMessage("readFileSync", true);
-		expect(utf8).toContain(".text()");
-		expect(utf8).not.toContain("do not default to .text()");
-		expect(formatReadMessage("readFileSync", false)).toContain(".bytes()");
-		expect(formatReadMessage("readFileSync", false)).toContain("do not default to .text()");
-	});
-
-	it("isReplaceableFsSymbol", () => {
-		expect(isReplaceableFsSymbol("readFileSync")).toBe(true);
-		expect(isReplaceableFsSymbol("mkdirSync")).toBe(false);
-	});
-});
-
-describe("hasNonBunWriteFlag", () => {
-	it("skips append and exclusive flags", () => {
-		expect(hasNonBunWriteFlag(parseCall(`writeFileSync(p, d, { flag: "a" })`))).toBe(true);
-		expect(hasNonBunWriteFlag(parseCall(`writeFileSync(p, d, { flag: "a" as const })`))).toBe(
-			true,
-		);
-		expect(hasNonBunWriteFlag(parseCall(`writeFileSync(p, d, { flag: "wx" })`))).toBe(true);
-	});
-
-	it("does not treat encoding strings as flags", () => {
-		expect(hasNonBunWriteFlag(parseCall(`writeFileSync(p, d, "ascii")`))).toBe(false);
-		expect(hasNonBunWriteFlag(parseCall(`writeFileSync(p, d)`))).toBe(false);
-	});
-});
-
-describe("hasCopyFileFlagsArg", () => {
-	it("detects third argument", () => {
-		expect(hasCopyFileFlagsArg(parseCall(`copyFile(a, b)`))).toBe(false);
-		expect(hasCopyFileFlagsArg(parseCall(`copyFile(a, b, 1)`))).toBe(true);
-	});
-});
-
-describe("collectBindings", () => {
-	it("records named imports and promises aliases", () => {
-		const sf = ts.createSourceFile(
-			"t.ts",
-			`
-			import { readFileSync, promises as fsp } from "node:fs";
-			import { promises } from "node:fs";
-			`,
-			ts.ScriptTarget.Latest,
-			true,
-		);
-		const b = collectBindings(sf);
-		expect(b.namedLocals.get("readFileSync")).toBe("readFileSync");
-		expect(b.promisesAliases.has("fsp")).toBe(true);
-		expect(b.promisesAliases.has("promises")).toBe(true);
-	});
-});
 
 describe("prefer-bun-file-io rule", () => {
 	it("flags replaceable named-import call sites only", () => {
@@ -122,6 +25,17 @@ describe("prefer-bun-file-io rule", () => {
 		expect(messages).toContain("Bun.write");
 		expect(messages).toContain(".bytes()");
 		expect(vs.every((v) => v.code.includes("("))).toBe(true);
+	});
+
+	it("flags fs/promises entry points", () => {
+		const vs = violationsOf(`
+			import { readFile } from "node:fs/promises";
+			import { readFileSync } from "fs/promises";
+			readFile("p");
+			readFileSync("p");
+		`);
+		expect(vs.length).toBe(2);
+		expect(vs.every((v) => v.message.includes(".bytes()"))).toBe(true);
 	});
 
 	it("ignores unused named imports", () => {
@@ -193,6 +107,24 @@ describe("prefer-bun-file-io rule", () => {
 		expect(vs[0]?.location.line).toBe(3);
 	});
 
+	it("flags a string-literal require binding and a default binding", () => {
+		const vs = violationsOf(`
+			const { "readFileSync": rf } = require("fs");
+			const { default: fs } = require("node:fs");
+			rf("p");
+			fs.readFileSync("p");
+		`);
+		expect(vs.length).toBe(2);
+	});
+
+	it("flags an inline require call", () => {
+		const vs = violationsOf(`
+			require("node:fs").readFileSync("p");
+			require("node:fs").promises.readFile("p");
+		`);
+		expect(vs.length).toBe(2);
+	});
+
 	it("supports import equals", () => {
 		const vs = violationsOf(`
 			import fs = require("node:fs");
@@ -206,6 +138,7 @@ describe("prefer-bun-file-io rule", () => {
 			import * as fs from "node:fs";
 			fs.writeFileSync("p", "d", { flag: "a" });
 			fs.writeFileSync("p", "d", { flag: "wx" });
+			fs.writeFileSync("p", "d", { "flag": "a" as const });
 			fs.writeFileSync("p", "d", "ascii");
 			fs.copyFile("a", "b", 1);
 			fs.copyFile("a", "b");
@@ -214,6 +147,7 @@ describe("prefer-bun-file-io rule", () => {
 		const codes = vs.map((v) => v.code).join("\n");
 		expect(codes).toContain("ascii");
 		expect(codes).toContain('copyFile("a", "b")');
+		expect(codes).not.toContain("flag");
 	});
 
 	it("read encoding messages and base64 skip", () => {
@@ -238,6 +172,19 @@ describe("prefer-bun-file-io rule", () => {
 		expect(b64.length).toBe(0);
 	});
 
+	it("reads encoding from an options object", () => {
+		const vs = violationsOf(`
+			import * as fs from "node:fs";
+			fs.readFileSync("p", { encoding: "utf8" });
+			fs.readFile("p", { encoding: "utf-8" as const });
+			fs.readFileSync("p", { "encoding": "hex" });
+			fs.readFile("p", { encoding: "base64" });
+		`);
+		expect(vs.length).toBe(2);
+		expect(vs[0]?.message).toContain(".text()");
+		expect(vs[1]?.message).toContain(".text()");
+	});
+
 	it("allows mkdir/readdir/appendFile and Bun APIs", () => {
 		const vs = violationsOf(`
 			import { mkdirSync, readdirSync, appendFileSync } from "node:fs";
@@ -258,14 +205,60 @@ describe("prefer-bun-file-io rule", () => {
 		expect(vs.length).toBe(0);
 	});
 
+	it("flags a read when the encoding is not a string literal", () => {
+		const vs = violationsOf(`
+			import * as fs from "node:fs";
+			const encoding = "utf8";
+			fs.readFileSync("p", encoding);
+			fs.readFileSync("p", { encoding: encoding });
+			fs.readFileSync("p", { "mode": 1, ["encoding"]: "hex" });
+		`);
+		expect(vs.length).toBe(3);
+		expect(vs.every((v) => v.message.includes(".bytes()"))).toBe(true);
+	});
+
+	it("flags a write whose flag Bun.write can express", () => {
+		const vs = violationsOf(`
+			import * as fs from "node:fs";
+			fs.writeFileSync("p", "d", { flag: "r" });
+			fs.writeFileSync("p", "d", { flag: 1 });
+			fs.writeFileSync("p", "d", { ["flag"]: "a" });
+		`);
+		expect(vs.length).toBe(3);
+		expect(vs.map((v) => v.code).join("\n")).toContain('flag: "r"');
+	});
+
+	it("reads default imports, promise requires, and bindings that do not resolve", () => {
+		const vs = violationsOf(`
+			import fs from "node:fs";
+			import * as fsp from "node:fs/promises";
+			import broken from name;
+			let unused;
+			const { promises: p } = require("node:fs");
+			const [readFileSync] = require("fs");
+			const { readFileSync: {} } = require("node:fs");
+			const fsFromVar = require(mod);
+			fs.readFileSync("p");
+			fsp.readFile("q");
+			fsp.promises.readFile("q");
+			p.readFile("r");
+			fs.foo.readFile("s");
+			notRequire().readFileSync("t");
+			fs["readFileSync"]("u");
+		`);
+		expect(vs.map((v) => v.code)).toEqual([
+			'fs.readFileSync("p")',
+			'fsp.readFile("q")',
+			'p.readFile("r")',
+		]);
+	});
+
 	it("double runRules does not duplicate bindings", () => {
 		const analyzer = createTestSourceFile(`
 			import { readFileSync } from "node:fs";
 			readFileSync("p");
 		`);
-		const first = runRules({ analyzer, rules: [preferBunFileIoRule] }).flatMap(
-			(r) => r.violations,
-		);
+		const first = runRules({ analyzer, rules: [preferBunFileIoRule] }).flatMap((r) => r.violations);
 		const second = runRules({ analyzer, rules: [preferBunFileIoRule] }).flatMap(
 			(r) => r.violations,
 		);

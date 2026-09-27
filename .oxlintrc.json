@@ -22,6 +22,8 @@
 		"**/*.test.ts",
 		"fixtures",
 		"**/__fixtures__",
-		".mcp_data"
+		".mcp_data",
+		".stryker-tmp",
+		"reports"
 	]
 }

@@ -3,23 +3,24 @@
 	"hooks": {
 		"sessionStart": [
 			{
-				"command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/cm-session-start.ps1"
+				"command": "bun .cursor/hooks/cm-session-start.ts"
 			}
 		],
 		"beforeShellExecution": [
 			{
-				"command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/dcg-guard.ps1",
-				"failClosed": true
+				"command": "bun .cursor/hooks/dcg-guard.ts",
+				"failClosed": true,
+				"timeout": 30
 			}
 		],
 		"afterFileEdit": [
 			{
-				"command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/ubs-after-edit.ps1"
+				"command": "bun .cursor/hooks/ubs-after-edit.ts"
 			}
 		],
 		"stop": [
 			{
-				"command": "bun vet"
+				"command": "bun .cursor/hooks/stop.ts"
 			}
 		]
 	}

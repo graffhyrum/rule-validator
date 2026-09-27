@@ -3,7 +3,7 @@ import pc from "picocolors";
 import { isFileExcludedForRule, type ProjectConfig, type RuleExcludes } from "./config.ts";
 import { REGEX_SCAN_DEFAULT_EXCLUDES } from "./exclude-patterns.ts";
 import { type RelativePosixPath, toPosixPath, toRelativePosix } from "./paths.ts";
-import { RULES } from "./rules";
+import { RULES, type Rule } from "./rules.ts";
 import type { Severity } from "./rules/rule.ts";
 import { classifyOutcome, outcomeExitCode, printRunFooter } from "./run-frame.ts";
 
@@ -205,13 +205,7 @@ export function printSummaryReport(errorCount: number, warningCount: number): vo
 		warningCount > 0 ? pc.yellow(`${warningCount} warnings`) : `${warningCount} warnings`;
 	console.log(`${pc.bold(`${total} violations`)} (${errors}, ${warnings})`);
 }
-export interface Rule {
-	name: string;
-	pattern: RegExp;
-	message: string;
-	severity: Severity;
-	fileGuard?: (content: string) => boolean;
-}
+export type { Rule };
 export interface Violation {
 	file: RelativePosixPath;
 	line: number;
@@ -262,6 +256,6 @@ function applyScanDefaults(options?: ScanOptions) {
 	};
 }
 
-export { RULES } from "./rules";
+export { RULES };
 export * from "./rules/index";
 export * from "./typescript/index";

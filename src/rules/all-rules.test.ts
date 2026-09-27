@@ -1,20 +1,11 @@
 import path from "node:path";
 import { describe, expect, it } from "bun:test";
 import { Glob } from "bun";
+import { preferBunFileIoRule } from "../packages/file-io/index.ts";
 import { RULES } from "../rules.js";
 import { AST_RULES } from "./all-rules.js";
 
-const INFRA_FILES = new Set([
-	"index.ts",
-	"rule.ts",
-	"runner.ts",
-	"test-helpers.ts",
-	"replaceable-fs-symbols.ts",
-	"fs-module-specifiers.ts",
-	"write-file-non-bun-flag.ts",
-	"copy-file-flags.ts",
-	"fs-file-bindings.ts",
-]);
+const INFRA_FILES = new Set(["index.ts", "rule.ts", "runner.ts", "test-helpers.ts"]);
 describe("AST_RULES registration guard", () => {
 	it("every rule exported from src/rules is registered in AST_RULES", async () => {
 		const registeredNames = new Set(AST_RULES.map((r) => r.name));
@@ -36,6 +27,12 @@ describe("AST_RULES registration guard", () => {
 				).toBe(true);
 			}
 		}
+	});
+});
+describe("package entry rules", () => {
+	it("registers prefer-bun-file-io from its package entry point", () => {
+		const registeredNames = new Set(AST_RULES.map((r) => r.name));
+		expect(registeredNames.has(preferBunFileIoRule.name)).toBe(true);
 	});
 });
 describe("AST_RULES severity contract", () => {

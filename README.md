@@ -160,6 +160,7 @@ Scripts use Bun (`bun run …`). Invoke them via Bun, not raw npm/cmd.
 bun run build        # Build the project
 bun run test         # Run tests
 bun run test:coverage # Run tests with coverage
+bun run test:mutate  # Run mutation tests (Stryker)
 bun run typecheck    # Type check
 bun run check        # Biome lint check
 bun run fix          # Biome lint fix
@@ -182,6 +183,28 @@ export const RULES: Rule[] = [
 ```
 
 For AST-based rules, see `src/rules/no-any-types.ts` as an example.
+
+### Mutation testing
+
+Stryker changes production code and re-runs the test suite. A mutant survives when the tests still pass.
+
+```shell
+bun run test:mutate
+```
+
+Check that the suite loads under Stryker without scoring mutants:
+
+```shell
+bunx stryker run --dryRunOnly
+```
+
+Configuration is `stryker.conf.mjs`. Stryker loads only `json`, `js`, `mjs`, and `cjs` config files. The test runner is `@hughescr/stryker-bun-runner`. Stryker itself runs on Node 22 or newer. The test processes run on Bun.
+
+`bun fastvet` does not run mutation tests. A full run is slow. Incremental results are stored in `reports/stryker-incremental.json`. The HTML report is `reports/mutation/mutation.html`. Those paths, `.stryker-tmp`, and `stryker.log` are gitignored. The score does not fail the process.
+
+`src/config.ts` is excluded from mutation. Instrumentation changes the `ENOTDIR` path, and the dry run then returns `{}` instead of throwing.
+
+On Windows, `patches/@hughescr+stryker-bun-runner@1.4.0.patch` rewrites the coverage preload path so backslashes are not string escapes. It also starts each `bun test` child with `windowsHide` and without `detached`, because Windows ignores the hide flag on a detached process and then opens a console. `bun install` applies the patch.
 
 ## License
 

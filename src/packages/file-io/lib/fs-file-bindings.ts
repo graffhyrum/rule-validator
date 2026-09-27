@@ -1,6 +1,6 @@
 import * as ts from "typescript";
-import { fsModuleKind, isFsModuleSpecifier, type FsModuleKind } from "./fs-module-specifiers.js";
-import { isReplaceableFsSymbol, type ReplaceableFsSymbol } from "./replaceable-fs-symbols.js";
+import { fsModuleKind, isFsModuleSpecifier, type FsModuleKind } from "./fs-module-specifiers.ts";
+import { isReplaceableFsSymbol, type ReplaceableFsSymbol } from "./replaceable-fs-symbols.ts";
 /** Bindings are collected once per SourceFile on first ensureBindings call. */
 export interface FileBindings {
 	moduleLocals: ReadonlyMap<string, FsModuleKind>;
@@ -195,11 +195,8 @@ function recordNamedImport(
 	if (!isValueImportSpecifier(spec)) {
 		return;
 	}
-	const exportName = bindingExportName(spec);
-	const localName = bindingLocalName(spec);
-	if (exportName === undefined || localName === undefined) {
-		return;
-	}
+	const exportName = (spec.propertyName ?? spec.name).text;
+	const localName = spec.name.text;
 	if (isPromisesImportName(exportName) && kind === "fs") {
 		collector.promisesAliases.add(localName);
 		collector.moduleLocals.set(localName, "fs-promises");
@@ -213,8 +210,8 @@ function isValueImportSpecifier(spec: ts.ImportSpecifier): boolean {
 	if (spec.isTypeOnly) {
 		return false;
 	}
-	const clause = findImportClause(spec);
-	return clause !== undefined && !clause.isTypeOnly;
+	const clause = spec.parent.parent;
+	return ts.isImportClause(clause) && !clause.isTypeOnly;
 }
 function bindingLocalName(node: ts.ImportSpecifier | ts.BindingElement): string | undefined {
 	return identifierOrStringText(node.name);
@@ -275,16 +272,6 @@ function requireModuleSpecifier(expr: ts.Expression): string | undefined {
 function moduleSpecifierText(spec: ts.Expression): string | undefined {
 	if (ts.isStringLiteral(spec)) {
 		return spec.text;
-	}
-	return undefined;
-}
-function findImportClause(spec: ts.ImportSpecifier): ts.ImportClause | undefined {
-	let current: ts.Node | undefined = spec.parent;
-	while (current !== undefined) {
-		if (ts.isImportClause(current)) {
-			return current;
-		}
-		current = current.parent;
 	}
 	return undefined;
 }
