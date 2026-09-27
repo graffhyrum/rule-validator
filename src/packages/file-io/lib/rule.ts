@@ -1,10 +1,10 @@
 import * as ts from "typescript";
-import { hasCopyFileFlagsArg } from "./copy-file-flags.js";
-import { ensureBindings, resolveFsCall, type ResolvedFsCall } from "./fs-file-bindings.js";
-import { formatMessage, formatReadMessage } from "./replaceable-fs-symbols.js";
-import { createViolation, type ASTRule, type RuleContext } from "./rule.js";
-import { is } from "../typescript/index.js";
-import { hasNonBunWriteFlag } from "./write-file-non-bun-flag.js";
+import { createViolation, type ASTRule, type RuleContext } from "../../../rules/rule.ts";
+import { is } from "../../../typescript/index.ts";
+import { hasCopyFileFlagsArg } from "./copy-file-flags.ts";
+import { ensureBindings, resolveFsCall, type ResolvedFsCall } from "./fs-file-bindings.ts";
+import { formatMessage, formatReadMessage } from "./replaceable-fs-symbols.ts";
+import { hasNonBunWriteFlag } from "./write-file-non-bun-flag.ts";
 
 export const preferBunFileIoRule: ASTRule = {
 	name: "prefer-bun-file-io",

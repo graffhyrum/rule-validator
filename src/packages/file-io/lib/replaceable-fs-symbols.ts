@@ -47,7 +47,9 @@ export const REPLACEABLE_FS_SYMBOLS = {
 		notes: ["plain copy only; sync→async; flagged copyFile* calls with a flags arg are skipped"],
 	},
 } as const;
+
 export type ReplaceableFsSymbol = keyof typeof REPLACEABLE_FS_SYMBOLS;
+
 export function formatReadMessage(
 	symbol: "readFile" | "readFileSync",
 	encodingAwareText: boolean,
@@ -59,12 +61,13 @@ export function formatReadMessage(
 		symbol === "readFileSync"
 			? "sync→async: enclosing function must become async"
 			: "callback or Promise API → prefer await Bun.file(...)";
-	// UTF-8/utf-8 call sites: .text() is correct — omit the Buffer-default warning.
 	return `await Bun.file(path).text(). ${syncNote}`;
 }
+
 export function isReplaceableFsSymbol(name: string): name is ReplaceableFsSymbol {
 	return Object.hasOwn(REPLACEABLE_FS_SYMBOLS, name);
 }
+
 export function formatMessage(symbol: ReplaceableFsSymbol): string {
 	const { suggestion, notes } = REPLACEABLE_FS_SYMBOLS[symbol];
 	return `${suggestion}. ${notes.join(" ")}`;
