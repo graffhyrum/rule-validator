@@ -1,5 +1,7 @@
 # Agent Instructions
 
+Packages are deep modules: see [src/packages/README.md](./src/packages/README.md) before adding or importing one.
+
 This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get started.
 
 ## Quick Reference
@@ -171,16 +173,16 @@ Never place spy assertions in `finally` blocks that also call `mock.restore()`.
 
 ## Toolkit
 
-| Tool | Purpose                      | Key constraint                                                                           |
-| ---- | ---------------------------- | ---------------------------------------------------------------------------------------- |
-| br   | Issue tracker + triage       | `br doctor` at session start; `git push` at session end                                  |
-| cm   | Procedural memory (rules)    | `cm context "<task>"`; Cursor `sessionStart` hook (`.cursor/hooks/cm-session-start.ps1`) |
-| bv   | Graph-aware triage           | Always use `--robot-*` flags (bare `bv` blocks agents)                                   |
-| ms   | Skill discovery              | `ms suggest --machine --cwd .` at session start                                          |
-| cass | Session search (episodic)    | `cass search "<q>" --json --limit 5`                                                     |
-| toon | Token codec (40-60% savings) | Pipe: `--format toon \| toon -d`                                                         |
-| ubs  | Security scanner             | `.ubsignore`; `ubs --diff` before commits; `afterFileEdit` hook                          |
-| dcg  | Destructive command guard    | Cursor `beforeShellExecution` (`.cursor/hooks/dcg-guard.ps1`, `failClosed: true`)        |
+| Tool | Purpose                      | Key constraint                                                                              |
+| ---- | ---------------------------- | ------------------------------------------------------------------------------------------- |
+| br   | Issue tracker + triage       | `br doctor` at session start; `git push` at session end                                     |
+| cm   | Procedural memory (rules)    | `cm context "<task>"`; Cursor `sessionStart` hook (`bun .cursor/hooks/cm-session-start.ts`) |
+| bv   | Graph-aware triage           | Always use `--robot-*` flags (bare `bv` blocks agents)                                      |
+| ms   | Skill discovery              | `ms suggest --machine --cwd .` at session start                                             |
+| cass | Session search (episodic)    | `cass search "<q>" --json --limit 5`                                                        |
+| toon | Token codec (40-60% savings) | Pipe: `--format toon \| toon -d`                                                            |
+| ubs  | Security scanner             | `.ubsignore`; `ubs --diff` before commits; `afterFileEdit` hook                             |
+| dcg  | Destructive command guard    | Cursor `beforeShellExecution` (`bun .cursor/hooks/dcg-guard.ts`, `failClosed: true`)        |
 
 All tools support `--help`.
 
@@ -188,10 +190,10 @@ All tools support `--help`.
 
 Project hooks live in `.cursor/hooks.json` (scripts under `.cursor/hooks/`):
 
-- **cm** — `sessionStart` → `cm-session-start.ps1` injects `cm context` as `additional_context`
-- **dcg** — `beforeShellExecution` → `dcg-guard.ps1` denies destructive shell commands (`failClosed: true`)
-- **ubs** — `afterFileEdit` → `ubs-after-edit.ps1` runs `ubs --diff --format=json` (never blocks; critical/high on stderr)
+- **cm** — `sessionStart` → `bun .cursor/hooks/cm-session-start.ts` injects `cm context` as `additional_context`
+- **dcg** — `beforeShellExecution` → `bun .cursor/hooks/dcg-guard.ts` denies destructive shell commands (`failClosed: true`)
+- **ubs** — `afterFileEdit` → `bun .cursor/hooks/ubs-after-edit.ts` runs `ubs --diff --format=json` (never blocks; critical/high on stderr)
 
-POSIX `.sh` twins also live under `.cursor/hooks/` for non-Windows harnesses. This repo’s `hooks.json` uses PowerShell entrypoints.
+`hooks.json` starts cm, dcg, ubs, and stop with bun.
 
 Trusted workspace required for project hooks. Verify in Cursor **Settings → Hooks**. Critical/high ubs findings must be fixed before continuing.
