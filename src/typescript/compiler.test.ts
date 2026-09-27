@@ -73,6 +73,14 @@ describe("compiler", () => {
 			return stmt;
 		}
 
+		function classMembers(src: string): readonly ts.ClassElement[] {
+			const stmt = firstStatement(parse(src));
+			if (!is.classDeclaration(stmt)) {
+				throw new Error("expected a class declaration");
+			}
+			return stmt.members;
+		}
+
 		it("identifier: true for Identifier, false for StringLiteral", () => {
 			const sf = parse("const x = 1;");
 			const ident = findByKind(sf, ts.SyntaxKind.Identifier);
@@ -103,11 +111,9 @@ describe("compiler", () => {
 		});
 
 		it("constructorDeclaration: true for constructor member, false for MethodDeclaration", () => {
-			const classNode = firstStatement(
-				parse("class Foo { constructor() {} m() {} }"),
-			) as ts.ClassDeclaration;
-			const ctor = classNode.members[0];
-			const method = classNode.members[1];
+			const members = classMembers("class Foo { constructor() {} m() {} }");
+			const ctor = members[0];
+			const method = members[1];
 			assertDefined(ctor);
 			assertDefined(method);
 			expect(is.constructorDeclaration(ctor)).toBe(true);
@@ -188,9 +194,9 @@ describe("compiler", () => {
 		});
 
 		it("methodDeclaration: true for MethodDeclaration, false for PropertyDeclaration", () => {
-			const classNode = firstStatement(parse("class Foo { m() {} p = 1; }")) as ts.ClassDeclaration;
-			const method = classNode.members[0];
-			const prop = classNode.members[1];
+			const members = classMembers("class Foo { m() {} p = 1; }");
+			const method = members[0];
+			const prop = members[1];
 			assertDefined(method);
 			assertDefined(prop);
 			expect(is.methodDeclaration(method)).toBe(true);
@@ -198,11 +204,9 @@ describe("compiler", () => {
 		});
 
 		it("getAccessor: true for get accessor, false for set accessor", () => {
-			const classNode = firstStatement(
-				parse("class Foo { get x() { return 1; } set x(v: number) {} }"),
-			) as ts.ClassDeclaration;
-			const getter = classNode.members[0];
-			const setter = classNode.members[1];
+			const members = classMembers("class Foo { get x() { return 1; } set x(v: number) {} }");
+			const getter = members[0];
+			const setter = members[1];
 			assertDefined(getter);
 			assertDefined(setter);
 			expect(is.getAccessor(getter)).toBe(true);
@@ -210,11 +214,9 @@ describe("compiler", () => {
 		});
 
 		it("setAccessor: true for set accessor, false for get accessor", () => {
-			const classNode = firstStatement(
-				parse("class Foo { get x() { return 1; } set x(v: number) {} }"),
-			) as ts.ClassDeclaration;
-			const getter = classNode.members[0];
-			const setter = classNode.members[1];
+			const members = classMembers("class Foo { get x() { return 1; } set x(v: number) {} }");
+			const getter = members[0];
+			const setter = members[1];
 			assertDefined(getter);
 			assertDefined(setter);
 			expect(is.setAccessor(setter)).toBe(true);
@@ -222,9 +224,9 @@ describe("compiler", () => {
 		});
 
 		it("propertyDeclaration: true for PropertyDeclaration, false for MethodDeclaration", () => {
-			const classNode = firstStatement(parse("class Foo { p = 1; m() {} }")) as ts.ClassDeclaration;
-			const prop = classNode.members[0];
-			const method = classNode.members[1];
+			const members = classMembers("class Foo { p = 1; m() {} }");
+			const prop = members[0];
+			const method = members[1];
 			assertDefined(prop);
 			assertDefined(method);
 			expect(is.propertyDeclaration(prop)).toBe(true);
