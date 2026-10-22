@@ -238,6 +238,35 @@ describe("prefer-bun-file-io rule", () => {
 		expect(b64.length).toBe(0);
 	});
 
+	it("read encoding via options object and string-literal property name", () => {
+		const utf8 = violationsOf(`
+			import * as fs from "node:fs";
+			fs.readFileSync("p", { encoding: "utf8" });
+		`);
+		expect(utf8.length).toBe(1);
+		expect(utf8[0]?.message).toContain(".text()");
+
+		const utf8Str = violationsOf(`
+			import * as fs from "node:fs";
+			fs.readFileSync("p", { "encoding": "utf-8" as const });
+		`);
+		expect(utf8Str.length).toBe(1);
+		expect(utf8Str[0]?.message).toContain(".text()");
+
+		const hex = violationsOf(`
+			import * as fs from "node:fs";
+			fs.readFileSync("p", { encoding: "hex" });
+		`);
+		expect(hex.length).toBe(0);
+
+		const other = violationsOf(`
+			import * as fs from "node:fs";
+			fs.readFileSync("p", { flag: "r" });
+		`);
+		expect(other.length).toBe(1);
+		expect(other[0]?.message).toContain(".bytes()");
+	});
+
 	it("allows mkdir/readdir/appendFile and Bun APIs", () => {
 		const vs = violationsOf(`
 			import { mkdirSync, readdirSync, appendFileSync } from "node:fs";

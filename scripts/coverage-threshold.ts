@@ -6,16 +6,22 @@ const THRESHOLD = 90;
 
 const proc = Bun.spawn(["bun", "test", "--coverage"], {
 	stdout: "pipe",
-	stderr: "inherit",
+	stderr: "pipe",
 	env: { ...process.env, AGENT: "1" },
 });
 
-const raw = await new Response(proc.stdout).text();
-process.stdout.write(raw);
+const [rawOut, rawErr] = await Promise.all([
+	new Response(proc.stdout).text(),
+	new Response(proc.stderr).text(),
+]);
+process.stdout.write(rawOut);
+process.stderr.write(rawErr);
 
 const exitCode = await proc.exited;
 
 if (exitCode !== 0) process.exit(2);
+
+const raw = `${rawOut}\n${rawErr}`;
 
 checkThreshold(raw);
 
