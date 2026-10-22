@@ -31,7 +31,7 @@
 		"changeset": "changeset",
 		"version": "changeset version",
 		"release": "changeset tag && git push origin --follow-tags",
-		"crap": "bun run scripts/generate-crap-coverage.ts && crap4ts"
+		"crap": "bun test --coverage --coverage-reporter=lcov && bunx crap4ts -c coverage/lcov.info -f lcov --exclude \"**/*.test.ts\""
 	},
 	"dependencies": {
 		"arktype": "^2.2.9",
@@ -42,10 +42,10 @@
 	},
 	"devDependencies": {
 		"@changesets/cli": "^3.0.3",
+		"@graffhyrum/crap4ts": "github:graffhyrum/crap4ts",
 		"@types/bun": "^1.4.3",
 		"@types/node": "^26.6.5",
 		"@typescript/native": "npm:typescript@^7.0.2",
-		"crap4ts": "^1.0.1",
 		"oxfmt": "^0.74.0",
 		"oxlint": "^1.89.0",
 		"stepdown-rule": "github:graffhyrum/stepdown-rule"

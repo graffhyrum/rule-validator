@@ -48,9 +48,12 @@ function collectFailures(output: string): string[] {
 
 function parseLine(line: string): string | null {
 	const match = line.match(/^\s+(src[/\\]\S+)\s+\|\s+([\d.]+)\s+\|/);
-	if (!match || match[1] === undefined || match[2] === undefined) return null;
-	const pct = Number.parseFloat(match[2]);
-	const file = toPosixPath(match[1]);
+	if (!match) return null;
+	if (match.length < 3) return null;
+	const fileMatch = match[1] as string;
+	const pctMatch = match[2] as string;
+	const pct = Number.parseFloat(pctMatch);
+	const file = toPosixPath(fileMatch);
 	if (pct < THRESHOLD) return `${file}: ${pct}% functions (threshold: ${THRESHOLD}%)`;
 	return null;
 }
