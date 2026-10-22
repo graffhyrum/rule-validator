@@ -1,5 +1,11 @@
 # @graff/rule-validator
 
+## 1.1.1
+
+### Patch Changes
+
+- f05c462: Add CI workflow running vet on pull requests and point agents at .audit for dep-update history.
+
 ## 1.1.0
 
 ### Minor Changes
