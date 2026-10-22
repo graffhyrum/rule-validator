@@ -23,7 +23,7 @@ The `/simplify` pass caught and removed it. All 59 tests passed throughout.
    independently identified the duplicate `rule` key in `pairs`. The simplify
    pass converted a slightly worse solution into the best one.
 4. **Bead lifecycle respected** — `bd update in_progress` → implement → `bd
-close` → commit → `bd sync` → push; no steps skipped.
+   close` → commit → `bd sync` → push; no steps skipped.
 5. **Epic auto-closed** — recognized that rule-validator-psr was now fully
    satisfied and closed it without prompting.
 

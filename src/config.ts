@@ -60,8 +60,13 @@ async function fileExists(filePath: string): Promise<boolean> {
 	}
 }
 
-function isEnoent(error: unknown): boolean {
-	return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
+function isEnoent(error: unknown): error is NodeJS.ErrnoException {
+	return (
+		typeof error === "object" &&
+		error !== null &&
+		"code" in error &&
+		(error as { code?: unknown }).code === "ENOENT"
+	);
 }
 
 async function parseConfigFile(configPath: string): Promise<ProjectConfig> {
