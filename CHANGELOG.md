@@ -1,5 +1,11 @@
 # @graff/rule-validator
 
+## 1.1.3
+
+### Patch Changes
+
+- 3d9e18e: Reduce cyclomatic complexity in coverage-threshold parseLine to clear crap4ts CRAP threshold.
+
 ## 1.1.2
 
 ### Patch Changes
