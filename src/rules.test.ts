@@ -67,6 +67,7 @@ test("RULES.length matches src/rules.ts (update both when adding rules)", () => 
 function matchesRule(ruleName: string, line: string): RegExpMatchArray[] {
 	const rule = RULES.find((r) => r.name === ruleName);
 	if (!rule) throw new Error(`Rule not found: ${ruleName}`);
+	rule.pattern.lastIndex = 0;
 	return [...line.matchAll(rule.pattern)];
 }
 

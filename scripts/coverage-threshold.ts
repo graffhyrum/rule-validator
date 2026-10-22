@@ -4,7 +4,7 @@ import { toPosixPath } from "../src/paths.ts";
 
 const THRESHOLD = 90;
 
-const proc = Bun.spawn(["bun", "test", "--coverage"], {
+const proc = Bun.spawn(["bun", "test", "--coverage", "--parallel"], {
 	stdout: "pipe",
 	stderr: "pipe",
 	env: { ...process.env, AGENT: "1" },
