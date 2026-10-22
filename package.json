@@ -27,7 +27,10 @@
 		"fix": "bunx oxlint --fix . && bunx oxfmt .",
 		"custom-hooks": "bun scripts/run-stepdown.ts fix && bun run src/cli.ts",
 		"fastvet": "bun run build && bun typecheck && bun fix && bun run custom-hooks && bun run test:coverage",
-		"vet": "bun run fastvet"
+		"vet": "bun run fastvet",
+		"changeset": "changeset",
+		"version": "changeset version",
+		"release": "changeset tag && git push origin --follow-tags"
 	},
 	"dependencies": {
 		"arktype": "^2.2.9",
