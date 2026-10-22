@@ -31,7 +31,7 @@
 		"changeset": "changeset",
 		"version": "changeset version",
 		"release": "changeset tag && git push origin --follow-tags",
-		"crap": "crap4ts"
+		"crap": "bun run scripts/generate-crap-coverage.ts && crap4ts"
 	},
 	"dependencies": {
 		"arktype": "^2.2.9",
