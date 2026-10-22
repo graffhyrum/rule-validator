@@ -1,5 +1,7 @@
 # Agent Instructions
 
+Navigation: dependency-update history and known breakages live in `.audit/` (see `.audit/latest-deps.tsv`).
+
 This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get started.
 
 ## Quick Reference
