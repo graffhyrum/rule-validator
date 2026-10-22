@@ -1,6 +1,9 @@
 // Tests for project config loading, validation, and exclusion integration
 // Covers: discovery, merging, per-rule exclusions, error cases, scan integration
-import { afterEach, describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it, mock } from "bun:test";
+
+// Clear mocks left by sibling test files (Bun shares one module cache per run).
+mock.restore();
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";

@@ -126,6 +126,7 @@ export function checkLineForViolations(params: CheckLineParams): void {
 			isFileExcludedForRule(relPath, rule.name, ruleExcludes)
 		)
 			continue;
+		rule.pattern.lastIndex = 0;
 		const matches: RegExpMatchArray[] = [...line.matchAll(rule.pattern)];
 		for (const match of matches) {
 			violations.push({
