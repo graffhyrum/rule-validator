@@ -62,7 +62,7 @@
 
     "@clack/prompts": ["@clack/prompts@1.8.1", "", { "dependencies": { "@clack/core": "1.5.1", "fast-string-width": "^3.0.2", "fast-wrap-ansi": "^0.2.0", "sisteransi": "^1.0.5" } }, "sha512-dlT1m5e/0yUL0kRNcQn7yGLVThkgbB0Ga/1AmfDDC/8ik6AIiSf2QLQO2zPYvefsHP0aFgxO93cVLCCfDp7kzQ=="],
 
-    "@graffhyrum/crap4ts": ["@graffhyrum/crap4ts@github:graffhyrum/crap4ts#f603213", { "dependencies": { "arktype": "^2.2.3", "typescript": "^6.0.3" }, "bin": { "crap4ts": "src/index.ts" } }, "graffhyrum-crap4ts-f603213", "sha512-hcY4WCRvVtg/fqgv9bUAYc09RzEn/Rs1I6vYywrDBhr/N5PdcJqtuv1RsDou53ZakDOWSUqf/GJpIDHFOGrvkw=="],
+    "@graffhyrum/crap4ts": ["@graffhyrum/crap4ts@github:graffhyrum/crap4ts#a960da9", { "dependencies": { "arktype": "^2.2.3", "typescript": "^6.0.3" }, "bin": { "crap4ts": "src/index.ts" } }, "graffhyrum-crap4ts-a960da9", "sha512-E8/tgmgZQmjglaTdmoYoLEsh4v0rrEQ+Be3cwEeIcI1b+ZecwFrrsDejP/0GH98Tex4ZpNhMjTP4Xhys/ZciXA=="],
 
     "@manypkg/find-root": ["@manypkg/find-root@3.1.0", "", { "dependencies": { "@manypkg/tools": "^2.1.0" } }, "sha512-BcSqCyKhBVZ5YkSzOiheMCV41kqAFptW6xGqYSTjkVTl9XQpr+pqHhwgGCOHQtjDCv7Is6EFyA14Sm5GVbVABA=="],
 
@@ -254,7 +254,7 @@
 
     "sisteransi": ["sisteransi@1.0.5", "", {}, "sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg=="],
 
-    "stepdown-rule": ["@stepdown/analyzer@github:graffhyrum/stepdown-rule#2709fd7", { "dependencies": { "arktype": "^2.2.9", "commander": "^15.0.0", "glob": "^13.0.6", "minimatch": "^10.2.6", "picocolors": "^1.1.1", "typescript": "^6.0.3" }, "bin": { "stepdown-rule": "./src/cli.ts" } }, "graffhyrum-stepdown-rule-2709fd7", "sha512-n7O+S4L9MHL3YX1xH6m+r0NaylRwCJoy598R/6RQmdZCgk3+pYDmTdLS5KIgx2IGXnMXUx+MBacr8avXLXQMxg=="],
+    "stepdown-rule": ["@stepdown/analyzer@github:graffhyrum/stepdown-rule#0cd0836", { "dependencies": { "arktype": "^2.2.9", "commander": "^15.0.0", "glob": "^13.0.6", "minimatch": "^10.2.6", "picocolors": "^1.1.1", "typescript": "^6.0.3" }, "bin": { "stepdown-rule": "./src/cli.ts" } }, "graffhyrum-stepdown-rule-0cd0836", "sha512-o2om3lHzxj1a6oZnI1etfw2JLsD1EVDqADfwjWhB0wtduU6IbFNk/C1zi0ADzlsNVAP5sXOGaKFAwEje3e9LrA=="],
 
     "tinyexec": ["tinyexec@1.3.1", "", {}, "sha512-GCvB3aoys96IuDFBMcTB46JOR6mdMtAToqwiW8JlWhsoh1mhHi/xn9ss/Dg7N555GiJyEt2qzoG/NHCwM6h1EA=="],
 
@@ -269,6 +269,8 @@
     "yaml": ["yaml@2.9.1", "", { "bin": { "yaml": "bin.mjs" } }, "sha512-3NxN8+78OdzbT7C/WjGsyfPAtJaN3FNDsWxv7Y7mcDsT/oOmgW8BpyQQFFBnvZE3j9Y2Sdz1ULFLezL7Eb2yFw=="],
 
     "@graffhyrum/crap4ts/typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
+
+    "bun-types/undici-types": ["undici-types@8.12.3", "", {}, "sha512-EXE4ydL3S76dFb27UFjNVZHTyv/TLdATj/KUe29ptdcg6qXL48J2tZ3126E5kICj5jn781OR+XlVH1N6Mz8jbA=="],
 
     "stepdown-rule/typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
   }
