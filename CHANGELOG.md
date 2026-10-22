@@ -1,5 +1,20 @@
 # @graff/rule-validator
 
+## 1.1.0
+
+### Minor Changes
+
+- 3f7558e: Frame human CLI runs with a dim header and coloured verdict footer so output stands apart from surrounding shell noise. JSON, help, and version stay unframed.
+- 2a3ac7f: Brand relative POSIX paths, centralize exclude lists, and make createAnalyzer parse-only with injectable deps for faster AST scans.
+
+### Patch Changes
+
+- 0e22fbe: Document agent toolkit and add Cursor hooks for cm, dcg, and ubs.
+- 972a5f9: Enforce LF line endings and document Bun/shell-portable workflows.
+- 69d65aa: Add stepdown-rule via local Bun runner and make package scripts Windows-safe.
+- 0eeed08: Switched typecheck and declaration emit from the TypeScript native preview to the TypeScript 7 compiler. Updated the other dependencies to their latest versions.
+- 89035cf: Fix coverage threshold script for Bun's stderr coverage output, bump dependencies to latest, and align type branding with TypeScript best practices.
+
 ## 1.0.0
 
 ### Minor Changes
