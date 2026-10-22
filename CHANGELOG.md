@@ -1,5 +1,11 @@
 # @graff/rule-validator
 
+## 1.1.2
+
+### Patch Changes
+
+- a87a699: Add `crap4ts` as a dev dependency for CRAP-score analysis of complex, under-tested functions.
+
 ## 1.1.1
 
 ### Patch Changes
