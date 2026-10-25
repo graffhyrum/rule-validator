@@ -1,5 +1,11 @@
 # @graff/rule-validator
 
+## 1.2.0
+
+### Minor Changes
+
+- a63dade: Flag ArkType schema strings that use the wrong keyword order or a bare instanceof, and flag type predicates whose names do not start with is or has.
+
 ## 1.1.3
 
 ### Patch Changes
