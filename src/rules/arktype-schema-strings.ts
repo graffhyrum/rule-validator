@@ -21,10 +21,13 @@ interface ArkBindings {
 
 const bindingsByFile = new WeakMap<ts.SourceFile, ArkBindings>();
 
+const BARE_INSTANCEOF_MESSAGE =
+	'ArkType schema strings do not use instanceof. Use a built-in name such as "Date", or type.instanceOf(Class) for a constructor.';
+
 export const arktypeSchemaStringsRule: ASTRule = {
 	name: "arktype-schema-strings",
 	description:
-		"ArkType schema strings use instanceof() and put format keywords before min, max, and pattern.",
+		"ArkType schema strings use a built-in name or type.instanceOf, and put format keywords before min, max, and pattern.",
 	severity: "error",
 	visit(context: RuleContext, node: ts.Node): void {
 		if (!ts.isCallExpression(node)) {
@@ -49,12 +52,171 @@ function reportArkCall(context: RuleContext, call: ts.CallExpression): void {
 function isArkTypeCall(call: ts.CallExpression, bindings: ArkBindings): boolean {
 	const expr = call.expression;
 	if (ts.isIdentifier(expr)) {
-		return bindings.typeLocals.has(expr.text);
+		return isImportedTypeCall(expr, bindings.typeLocals);
 	}
-	if (ts.isPropertyAccessExpression(expr) && ts.isIdentifier(expr.expression)) {
-		return expr.name.text === TYPE_EXPORT && bindings.namespaceLocals.has(expr.expression.text);
+	if (ts.isPropertyAccessExpression(expr)) {
+		return isNamespaceTypeCall(expr, bindings.namespaceLocals);
 	}
 	return false;
+}
+
+function isImportedTypeCall(name: ts.Identifier, imported: ReadonlySet<string>): boolean {
+	if (!imported.has(name.text)) {
+		return false;
+	}
+	const binding = nearestBinding(name);
+	return binding !== undefined && isValueTypeImport(binding);
+}
+
+function isNamespaceTypeCall(
+	expr: ts.PropertyAccessExpression,
+	namespaces: ReadonlySet<string>,
+): boolean {
+	if (expr.name.text !== TYPE_EXPORT || !ts.isIdentifier(expr.expression)) {
+		return false;
+	}
+	if (!namespaces.has(expr.expression.text)) {
+		return false;
+	}
+	const binding = nearestBinding(expr.expression);
+	return binding !== undefined && ts.isNamespaceImport(binding);
+}
+
+function nearestBinding(id: ts.Identifier): ts.Node | undefined {
+	let scope: ts.Node | undefined = id.parent;
+	while (scope !== undefined) {
+		const found = bindingDeclaredBy(scope, id);
+		if (found !== undefined) {
+			return found;
+		}
+		scope = scope.parent;
+	}
+	return undefined;
+}
+
+function bindingDeclaredBy(scope: ts.Node, id: ts.Identifier): ts.Node | undefined {
+	const statements = statementsOf(scope);
+	if (statements !== undefined) {
+		return bindingInStatements(statements, id);
+	}
+	if (isFunctionScope(scope)) {
+		return bindingInFunction(scope, id);
+	}
+	return undefined;
+}
+
+function statementsOf(scope: ts.Node): readonly ts.Statement[] | undefined {
+	if (ts.isSourceFile(scope) || ts.isBlock(scope) || ts.isModuleBlock(scope)) {
+		return scope.statements;
+	}
+	return undefined;
+}
+
+function bindingInStatements(
+	statements: readonly ts.Statement[],
+	id: ts.Identifier,
+): ts.Node | undefined {
+	let importBinding: ts.Node | undefined;
+	for (const stmt of statements) {
+		const found = bindingInStatement(stmt, id);
+		if (found === undefined) {
+			continue;
+		}
+		if (ts.isImportSpecifier(found) || ts.isNamespaceImport(found)) {
+			importBinding ??= found;
+			continue;
+		}
+		return found;
+	}
+	return importBinding;
+}
+
+function bindingInStatement(stmt: ts.Statement, id: ts.Identifier): ts.Node | undefined {
+	if (ts.isImportDeclaration(stmt)) {
+		return importBinding(stmt, id.text);
+	}
+	if (ts.isFunctionDeclaration(stmt) && stmt.name?.text === id.text) {
+		return stmt.name;
+	}
+	if (!ts.isVariableStatement(stmt)) {
+		return undefined;
+	}
+	for (const decl of stmt.declarationList.declarations) {
+		if (!bindsName(decl.name, id.text)) {
+			continue;
+		}
+		if (decl.initializer !== undefined && isInside(id, decl.initializer)) {
+			continue;
+		}
+		return decl;
+	}
+	return undefined;
+}
+
+function importBinding(stmt: ts.ImportDeclaration, name: string): ts.Node | undefined {
+	const clause = stmt.importClause;
+	if (clause?.namedBindings === undefined) {
+		return undefined;
+	}
+	if (ts.isNamespaceImport(clause.namedBindings)) {
+		return clause.namedBindings.name.text === name ? clause.namedBindings : undefined;
+	}
+	for (const spec of clause.namedBindings.elements) {
+		if (spec.name.text === name) {
+			return spec;
+		}
+	}
+	return undefined;
+}
+
+function bindingInFunction(fn: ts.FunctionLikeDeclaration, id: ts.Identifier): ts.Node | undefined {
+	for (const param of fn.parameters) {
+		if (!bindsName(param.name, id.text)) {
+			continue;
+		}
+		if (param.initializer !== undefined && isInside(id, param.initializer)) {
+			continue;
+		}
+		return param;
+	}
+	if ((ts.isFunctionDeclaration(fn) || ts.isFunctionExpression(fn)) && fn.name?.text === id.text) {
+		return fn.name;
+	}
+	return undefined;
+}
+
+function isFunctionScope(node: ts.Node): node is ts.FunctionLikeDeclaration {
+	return (
+		ts.isFunctionDeclaration(node) ||
+		ts.isFunctionExpression(node) ||
+		ts.isArrowFunction(node) ||
+		ts.isMethodDeclaration(node) ||
+		ts.isConstructorDeclaration(node) ||
+		ts.isGetAccessor(node) ||
+		ts.isSetAccessor(node)
+	);
+}
+
+function bindsName(name: ts.BindingName, text: string): boolean {
+	return ts.isIdentifier(name) && name.text === text;
+}
+
+function isInside(node: ts.Node, ancestor: ts.Node): boolean {
+	let current: ts.Node | undefined = node;
+	while (current !== undefined) {
+		if (current === ancestor) {
+			return true;
+		}
+		current = current.parent;
+	}
+	return false;
+}
+
+function isValueTypeImport(node: ts.Node): boolean {
+	if (!ts.isImportSpecifier(node) || node.isTypeOnly) {
+		return false;
+	}
+	return (node.propertyName ?? node.name).text === TYPE_EXPORT;
 }
 
 function schemaStrings(call: ts.CallExpression): ts.StringLiteralLike[] {
@@ -128,7 +290,7 @@ function basisAfter(text: string, index: number): string | undefined {
 function messageFor(issue: SchemaIssue): string {
 	switch (issue.kind) {
 		case "bare-instanceof":
-			return "ArkType instanceof needs parentheses. Write instanceof(Class).";
+			return BARE_INSTANCEOF_MESSAGE;
 		case "keyword-order":
 			return `ArkType keyword ${issue.basis} comes after ${issue.constraint}. Put ${issue.basis} first.`;
 		default: {

@@ -29,7 +29,7 @@ describe("arktype-schema-strings rule", () => {
 		).toEqual([
 			"ArkType keyword email comes after min. Put email first.",
 			"ArkType keyword email comes after pattern. Put email first.",
-			"ArkType instanceof needs parentheses. Write instanceof(Class).",
+			'ArkType schema strings do not use instanceof. Use a built-in name such as "Date", or type.instanceOf(Class) for a constructor.',
 		]);
 	});
 
@@ -43,7 +43,7 @@ describe("arktype-schema-strings rule", () => {
 			`),
 		).toEqual([
 			"ArkType keyword url comes after min. Put url first.",
-			"ArkType instanceof needs parentheses. Write instanceof(Class).",
+			'ArkType schema strings do not use instanceof. Use a built-in name such as "Date", or type.instanceOf(Class) for a constructor.',
 		]);
 	});
 
@@ -56,7 +56,7 @@ describe("arktype-schema-strings rule", () => {
 			`),
 		).toEqual([
 			"ArkType keyword integer comes after max. Put integer first.",
-			"ArkType instanceof needs parentheses. Write instanceof(Class).",
+			'ArkType schema strings do not use instanceof. Use a built-in name such as "Date", or type.instanceOf(Class) for a constructor.',
 			"ArkType keyword hex comes after min. Put hex first.",
 		]);
 	});
@@ -80,6 +80,47 @@ describe("arktype-schema-strings rule", () => {
 				type("instanceof Date");
 			`),
 		).toEqual([]);
+	});
+
+	it("ignores a local binding that shadows the imported type name", () => {
+		expect(
+			messages(`
+				import { type } from "arktype";
+				import * as ark from "arktype";
+				type("string.min(1).hex");
+				function alias() {
+					const type = type("string.min(5).email");
+					return type;
+				}
+				function take(type: (value: string) => string) {
+					return type("instanceof Date");
+				}
+				function run() {
+					function type(value: string): string {
+						return value;
+					}
+					return type("instanceof Date");
+				}
+				const hide = () => {
+					const type = (value: string): string => value;
+					return type("instanceof Date");
+				};
+				function hideNamespace() {
+					const ark = { type: (value: string): string => value };
+					return ark.type("instanceof Date");
+				}
+				ark.type("string.min(5).url");
+				void alias;
+				void take;
+				void run;
+				void hide;
+				void hideNamespace;
+			`),
+		).toEqual([
+			"ArkType keyword hex comes after min. Put hex first.",
+			"ArkType keyword email comes after min. Put email first.",
+			"ArkType keyword url comes after min. Put url first.",
+		]);
 	});
 
 	it("ignores strings that are not schema arguments of type()", () => {

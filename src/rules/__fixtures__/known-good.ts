@@ -60,11 +60,11 @@ async function bunIoExample(): Promise<void> {
 	await Bun.write("out.txt", text);
 }
 
-// arktype-schema-strings: format keyword before constraints, instanceof()
+// arktype-schema-strings: format before the length bound, built-in Date, uppercase pattern
 const emailSchema = type({
-	email: "string.email.min(5)",
-	when: "instanceof(Date)",
-	password: "string.min(8).pattern(/[A-Z]/)",
+	email: "string.email >= 5",
+	when: "Date",
+	password: "string >= 8 & /[A-Z]/",
 });
 
 // type-predicate-name: is, has, and assert prefixes
