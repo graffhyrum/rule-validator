@@ -1,4 +1,5 @@
 /* eslint-disable -- fixture file with intentional violations */
+import { type } from "arktype";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
 // no-any-types: uses `any` keyword
@@ -41,6 +42,15 @@ function instanceTests(x: unknown) {
 	expect(x).toBeInstanceOf(Error);
 }
 
+// type-predicate-name: guard name must start with is or has
+function checkUser(value: unknown): value is { id: string } {
+	return false;
+}
+
+// arktype-schema-strings: keyword order and instanceof parentheses
+const badEmail = type("string.min(5).email");
+const badDate = type("instanceof Date");
+
 // prefer-bun-file-io: replaceable node:fs APIs
 existsSync("p");
 readFileSync("p");
@@ -56,4 +66,7 @@ export {
 	waitExample,
 	typeTests,
 	instanceTests,
+	checkUser,
+	badEmail,
+	badDate,
 };

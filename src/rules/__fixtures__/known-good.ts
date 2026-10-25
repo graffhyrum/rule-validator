@@ -1,4 +1,5 @@
 /* Clean code — no rule violations expected */
+import { type } from "arktype";
 import { appendFileSync, mkdirSync, readdirSync } from "node:fs";
 
 // Proper typing instead of any
@@ -59,6 +60,21 @@ async function bunIoExample(): Promise<void> {
 	await Bun.write("out.txt", text);
 }
 
+// arktype-schema-strings: format keyword before constraints, instanceof()
+const emailSchema = type({
+	email: "string.email.min(5)",
+	when: "instanceof(Date)",
+	password: "string.min(8).pattern(/[A-Z]/)",
+});
+
+// type-predicate-name: is, has, and assert prefixes
+function hasId(value: unknown): value is { id: string } {
+	return isUser(value);
+}
+function isUser(value: unknown): value is { id: string } {
+	return typeof value === "object" && value !== null && "id" in value;
+}
+
 export {
 	processData,
 	element,
@@ -70,4 +86,7 @@ export {
 	instanceTests,
 	totalCount,
 	bunIoExample,
+	isUser,
+	hasId,
+	emailSchema,
 };
