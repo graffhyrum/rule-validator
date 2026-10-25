@@ -92,41 +92,102 @@ export function getNodeText(sourceFile: ts.SourceFile, node: ts.Node): string {
 	return node.getText(sourceFile);
 }
 export const is = {
-	identifier: (node: ts.Node): node is ts.Identifier => ts.isIdentifier(node),
-	variableDeclaration: (node: ts.Node): node is ts.VariableDeclaration =>
-		ts.isVariableDeclaration(node),
-	functionDeclaration: (node: ts.Node): node is ts.FunctionDeclaration =>
-		ts.isFunctionDeclaration(node),
-	classDeclaration: (node: ts.Node): node is ts.ClassDeclaration => ts.isClassDeclaration(node),
-	constructorDeclaration: (node: ts.Node): node is ts.ConstructorDeclaration =>
-		ts.isConstructorDeclaration(node),
-	interfaceDeclaration: (node: ts.Node): node is ts.InterfaceDeclaration =>
-		ts.isInterfaceDeclaration(node),
-	typeAliasDeclaration: (node: ts.Node): node is ts.TypeAliasDeclaration =>
-		ts.isTypeAliasDeclaration(node),
-	typeReference: (node: ts.Node): node is ts.TypeReferenceNode => ts.isTypeReferenceNode(node),
-	callExpression: (node: ts.Node): node is ts.CallExpression => ts.isCallExpression(node),
-	binaryExpression: (node: ts.Node): node is ts.BinaryExpression => ts.isBinaryExpression(node),
-	propertyAccessExpression: (node: ts.Node): node is ts.PropertyAccessExpression =>
-		ts.isPropertyAccessExpression(node),
-	stringLiteral: (node: ts.Node): node is ts.StringLiteral => ts.isStringLiteral(node),
-	templateExpression: (node: ts.Node): node is ts.TemplateExpression =>
-		ts.isTemplateExpression(node),
-	importDeclaration: (node: ts.Node): node is ts.ImportDeclaration => ts.isImportDeclaration(node),
-	exportDeclaration: (node: ts.Node): node is ts.ExportDeclaration => ts.isExportDeclaration(node),
-	methodDeclaration: (node: ts.Node): node is ts.MethodDeclaration => ts.isMethodDeclaration(node),
-	getAccessor: (node: ts.Node): node is ts.GetAccessorDeclaration => ts.isGetAccessor(node),
-	setAccessor: (node: ts.Node): node is ts.SetAccessorDeclaration => ts.isSetAccessor(node),
-	propertyDeclaration: (node: ts.Node): node is ts.PropertyDeclaration =>
-		ts.isPropertyDeclaration(node),
-	parameter: (node: ts.Node): node is ts.ParameterDeclaration => ts.isParameter(node),
-	asExpression: (node: ts.Node): node is ts.AsExpression => ts.isAsExpression(node),
+	identifier: isIdentifier,
+	variableDeclaration: isVariableDeclaration,
+	functionDeclaration: isFunctionDeclaration,
+	classDeclaration: isClassDeclaration,
+	constructorDeclaration: isConstructorDeclaration,
+	interfaceDeclaration: isInterfaceDeclaration,
+	typeAliasDeclaration: isTypeAliasDeclaration,
+	typeReference: isTypeReference,
+	callExpression: isCallExpression,
+	binaryExpression: isBinaryExpression,
+	propertyAccessExpression: isPropertyAccessExpression,
+	stringLiteral: isStringLiteral,
+	templateExpression: isTemplateExpression,
+	importDeclaration: isImportDeclaration,
+	exportDeclaration: isExportDeclaration,
+	methodDeclaration: isMethodDeclaration,
+	getAccessor: isGetAccessor,
+	setAccessor: isSetAccessor,
+	propertyDeclaration: isPropertyDeclaration,
+	parameter: isParameter,
+	asExpression: isAsExpression,
 	anyKeyword: (node: ts.Node): boolean => node.kind === ts.SyntaxKind.AnyKeyword,
-	typeOfExpression: (node: ts.Node): node is ts.TypeOfExpression =>
-		node.kind === ts.SyntaxKind.TypeOfExpression,
+	typeOfExpression: isTypeOfExpression,
 	unknownKeyword: (node: ts.Node): boolean => node.kind === ts.SyntaxKind.UnknownKeyword,
-	nonNullExpression: (node: ts.Node): node is ts.NonNullExpression => ts.isNonNullExpression(node),
+	nonNullExpression: isNonNullExpression,
 };
+
+function isIdentifier(node: ts.Node): node is ts.Identifier {
+	return ts.isIdentifier(node);
+}
+function isVariableDeclaration(node: ts.Node): node is ts.VariableDeclaration {
+	return ts.isVariableDeclaration(node);
+}
+function isFunctionDeclaration(node: ts.Node): node is ts.FunctionDeclaration {
+	return ts.isFunctionDeclaration(node);
+}
+function isClassDeclaration(node: ts.Node): node is ts.ClassDeclaration {
+	return ts.isClassDeclaration(node);
+}
+function isConstructorDeclaration(node: ts.Node): node is ts.ConstructorDeclaration {
+	return ts.isConstructorDeclaration(node);
+}
+function isInterfaceDeclaration(node: ts.Node): node is ts.InterfaceDeclaration {
+	return ts.isInterfaceDeclaration(node);
+}
+function isTypeAliasDeclaration(node: ts.Node): node is ts.TypeAliasDeclaration {
+	return ts.isTypeAliasDeclaration(node);
+}
+function isTypeReference(node: ts.Node): node is ts.TypeReferenceNode {
+	return ts.isTypeReferenceNode(node);
+}
+function isCallExpression(node: ts.Node): node is ts.CallExpression {
+	return ts.isCallExpression(node);
+}
+function isBinaryExpression(node: ts.Node): node is ts.BinaryExpression {
+	return ts.isBinaryExpression(node);
+}
+function isPropertyAccessExpression(node: ts.Node): node is ts.PropertyAccessExpression {
+	return ts.isPropertyAccessExpression(node);
+}
+function isStringLiteral(node: ts.Node): node is ts.StringLiteral {
+	return ts.isStringLiteral(node);
+}
+function isTemplateExpression(node: ts.Node): node is ts.TemplateExpression {
+	return ts.isTemplateExpression(node);
+}
+function isImportDeclaration(node: ts.Node): node is ts.ImportDeclaration {
+	return ts.isImportDeclaration(node);
+}
+function isExportDeclaration(node: ts.Node): node is ts.ExportDeclaration {
+	return ts.isExportDeclaration(node);
+}
+function isMethodDeclaration(node: ts.Node): node is ts.MethodDeclaration {
+	return ts.isMethodDeclaration(node);
+}
+function isGetAccessor(node: ts.Node): node is ts.GetAccessorDeclaration {
+	return ts.isGetAccessor(node);
+}
+function isSetAccessor(node: ts.Node): node is ts.SetAccessorDeclaration {
+	return ts.isSetAccessor(node);
+}
+function isPropertyDeclaration(node: ts.Node): node is ts.PropertyDeclaration {
+	return ts.isPropertyDeclaration(node);
+}
+function isParameter(node: ts.Node): node is ts.ParameterDeclaration {
+	return ts.isParameter(node);
+}
+function isAsExpression(node: ts.Node): node is ts.AsExpression {
+	return ts.isAsExpression(node);
+}
+function isTypeOfExpression(node: ts.Node): node is ts.TypeOfExpression {
+	return node.kind === ts.SyntaxKind.TypeOfExpression;
+}
+function isNonNullExpression(node: ts.Node): node is ts.NonNullExpression {
+	return ts.isNonNullExpression(node);
+}
 export interface NodeLocation {
 	file: string;
 	line: number;
