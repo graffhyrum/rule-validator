@@ -1,187 +1,146 @@
 # rule-validator
 
-A CLI tool and library for validating code against custom linting rules. Scans TypeScript and JavaScript files for violations and reports errors/warnings.
+A CLI tool and library that scans TypeScript and JavaScript files for
+code-quality violations. It runs regex and AST-based rules, reports
+errors and warnings with file/line/column locations, and exits non-zero
+on errors so it can gate CI.
 
-## Installation
+**What it's for:** catching banned patterns in your codebase —
+`waitForTimeout`, `any` types, string concatenation, non-null
+assertions, `as unknown as T`, and more — before they reach review.
+
+**Who it's for:** developers enforcing code-quality rules in TS/JS
+projects, especially Playwright, Bun, and Elysia codebases.
+
+**Why choose it:** dual regex + AST detection for fewer false
+positives, per-file and per-rule exclusions, config-file discovery
+that walks up from the working directory, and JSON output for
+automation.
+
+## Quickstart
+
+Prerequisites: [Bun](https://bun.sh) 1.4+.
 
 ```shell
+git clone https://github.com/graffhyrum/rule-validator.git
+cd rule-validator
 bun install
 bun run build
+bun run validate
 ```
 
-Or install as a dependency:
+`bun run validate` scans `**/*.{ts,tsx,js,jsx}` in the current
+directory and prints any violations. A clean run exits `0`.
+
+Verify it works on your own code by pointing it at a glob:
 
 ```shell
-bun add @graff/rule-validator
+bun run src/cli.ts "src/**/*.ts"
 ```
 
-Or link locally:
+## Install
 
-```shell # from this directory
+Use it in another project via a local link:
+
+```shell
+# in this repo
 bun link
-```
 
-```shell # in target project
+# in your project
 bun link @graff/rule-validator
 rule-validator
 ```
 
-## CLI Usage
+Or import the built library from `dist/`:
 
-### Basic Usage
-
-Scan all TypeScript/JavaScript files in the current directory:
-
-```shell
-bun run validate
+```typescript
+import { scanFiles, scanFile, RULES } from "@graff/rule-validator";
 ```
 
-Or run directly:
+## CLI usage
 
 ```shell
-bun run src/cli.ts
+rule-validator [pattern] [--json]
 ```
 
-### Custom File Pattern
+- `pattern` — glob for files to scan (default
+  `**/*.{ts,tsx,js,jsx}`).
+- `--json` — print results as JSON instead of the human report.
+- `-V, --version` / `-h, --help`.
 
-Specify a glob pattern to scan specific files:
+Exit codes: `0` when there are no errors (warnings allowed), `1`
+when errors are found or the scan crashes.
 
-```shell
-bun run validate "src/**/*.ts"
-```
+## Available rules
 
-### Exit Codes
-
-- `0` - No errors (clean or warnings only)
-- `1` - Errors found
-
-## Available Rules
-
-| Rule                     | Severity | Description                                                         |
-| ------------------------ | -------- | ------------------------------------------------------------------- |
-| `no-waitForTimeout`      | error    | Disallow Playwright's `waitForTimeout()` - use auto-waiting instead |
-| `no-any-types`           | error    | Disallow `any` type annotations                                     |
-| `template-literals-only` | error    | Require template literals instead of string concatenation           |
-| `no-static-classes`      | error    | Disallow static-only class patterns (use module functions)          |
-| `no-unknown-as-cast`     | error    | Disallow double casting through `unknown` (`as unknown as T`)       |
-| `no-expect-typeof-tobe`  | error    | Disallow `expect(typeof x).toBe(type)` - use TypeScript instead     |
-| `no-toBeInstanceOf`      | error    | Disallow `toBeInstanceOf()` - use behavior-focused assertions       |
+| Rule | Severity | What it catches |
+| --- | --- | --- |
+| `no-waitForTimeout` | error | Playwright `waitForTimeout()` — use auto-waiting |
+| `no-non-null-assertion` | error | The `!` non-null assertion operator |
+| `no-unknown-as-cast` | error | `as unknown as T` double casts |
+| `no-expect-typeof-tobe` | error | `expect(typeof x).toBe(...)` runtime type checks |
+| `no-toBeInstanceOf` | error | `toBeInstanceOf()` constructor checks |
+| `no-static-classes` | error | Classes with only static members |
+| `template-literals-only` | error | String concatenation instead of template literals |
+| `prefer-bun-file-io` | warning | `node:fs` file I/O where `Bun.file`/`Bun.write` fits |
+| `no-raw-response-in-elysia` | warning | `new Response()` in Elysia handlers |
+| `no-raw-locator-in-spec` | error | Raw `page.locator()` in spec files |
 
 ## Configuration
 
-Place a `rule-validator.config.json` file at your project root (or any ancestor directory — the tool walks up from the current working directory to find it).
-
-### Global Exclusions
-
-Patterns here are merged with the built-in defaults. Files matching any pattern are skipped entirely.
+Place a `rule-validator.config.json` at your project root. The tool
+walks up from the current working directory to find it.
 
 ```json
 {
-	"exclude": ["legacy/**", "src/generated/**"]
+  "exclude": ["legacy/**", "src/generated/**"],
+  "rules": {
+    "no-non-null-assertion": { "exclude": ["src/generated/**"] },
+    "no-static-classes": { "exclude": ["src/infrastructure/**"] }
+  }
 }
 ```
 
-### Per-Rule Exclusions
+- Global `exclude` appends to the built-in defaults; it cannot remove
+  them.
+- Per-rule `exclude` skips a rule for matching files only.
+- A missing config changes nothing. A malformed config errors out
+  with a non-zero exit.
 
-Files matching a rule's `exclude` patterns are skipped only for that rule; other rules still apply.
-
-```json
-{
-	"rules": {
-		"no-non-null-assertion": {
-			"exclude": ["src/generated/**", "src/adapters/legacy/**"]
-		},
-		"no-static-classes": {
-			"exclude": ["src/infrastructure/**"]
-		}
-	}
-}
-```
-
-### Combined Example
-
-```json
-{
-	"exclude": ["legacy/**"],
-	"rules": {
-		"no-non-null-assertion": {
-			"exclude": ["src/generated/**"]
-		}
-	}
-}
-```
-
-**Notes:**
-
-- Global `exclude` appends to the built-in defaults; it cannot remove them.
-- If no config file is found, behavior is identical to current defaults (no regression).
-- A malformed or schema-invalid config produces a clear error and a non-zero exit.
+See `src/config.ts` for the full schema.
 
 ## Programmatic API
 
 ```typescript
 import { scanFiles, scanFile, RULES } from "@graff/rule-validator";
 
-// Scan multiple files
 const result = await scanFiles("src/**/*.ts");
-console.log(result);
-// { totalViolations: 5, errorCount: 3, warningCount: 2 }
+// { errorCount, warningCount, fileCount, violations? }
 
-// Scan a single file
 const violations = await scanFile("src/example.ts");
-console.log(violations);
-// [{ file: "src/example.ts", line: 10, column: 5, rule: {...}, match: ": any" }]
-
-// Access available rules
-console.log(RULES);
+// [{ file, line, column, rule, match, ... }]
 ```
 
-### API Reference
-
-#### `scanFiles(pattern: string, excludePatterns?: string[], excludeName?: string): Promise<ScanResult>`
-
-Scans files matching the glob pattern for rule violations.
-
-#### `scanFile(filePath: string): Promise<Violation[]>`
-
-Scans a single file and returns all violations found.
-
-#### `RULES: Rule[]`
-
-Array of all registered rules with their patterns and messages.
+Full types live in `src/index.ts`.
 
 ## Development
 
-Scripts use Bun (`bun run …`). Invoke them via Bun, not raw npm/cmd.
-
-### Scripts
+Scripts run through Bun (`bun run …`):
 
 ```shell
-bun run build        # Build the project
-bun run test         # Run tests
-bun run test:coverage # Run tests with coverage
-bun run typecheck    # Type check
-bun run check        # Biome lint check
-bun run fix          # Biome lint fix
-bun run vet          # Full validation (build, typecheck, lint, test)
+bun run build          # build + type declarations
+bun run test           # run tests
+bun run test:coverage  # tests with coverage threshold
+bun run typecheck      # TypeScript check
+bun run check          # oxlint + oxfmt
+bun run fix            # auto-fix lint/format
+bun run vet            # full validation (build, typecheck, lint, test)
 ```
 
-### Adding Custom Rules
-
-Rules are defined in `src/rules.ts` with a pattern, message, and severity:
-
-```typescript
-export const RULES: Rule[] = [
-	{
-		name: "my-custom-rule",
-		pattern: /myPattern/g,
-		message: "Description of the violation",
-		severity: "error", // or "warning"
-	},
-];
-```
-
-For AST-based rules, see `src/rules/no-any-types.ts` as an example.
+Rules live in `src/rules/` (one file per rule, with tests). Add a
+rule there and register it in `src/rules/all-rules.ts` and
+`src/rules.ts`. See `AGENTS.md` for coding rules and the test
+isolation notes.
 
 ## License
 
