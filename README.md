@@ -6,7 +6,7 @@ errors and warnings with file/line/column locations, and exits non-zero
 on errors so it can gate CI.
 
 **What it's for:** catching banned patterns in your codebase —
-`waitForTimeout`, `any` types, string concatenation, non-null
+`waitForTimeout`, string concatenation, non-null
 assertions, `as unknown as T`, and more — before they reach review.
 
 **Who it's for:** developers enforcing code-quality rules in TS/JS
