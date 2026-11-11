@@ -6,8 +6,14 @@ import { randomBytes, createHash } from "node:crypto";
 import type { DoctorReport } from "./types.ts";
 
 export function newRunId(seed: string): string {
-	const iso = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-	const digest = createHash("sha256").update(`${seed}:${iso}:${process.pid}:${randomBytes(8).toString("hex")}`).digest("hex").slice(0, 6);
+	const iso = new Date()
+		.toISOString()
+		.replace(/[-:]/g, "")
+		.replace(/\.\d{3}Z$/, "Z");
+	const digest = createHash("sha256")
+		.update(`${seed}:${iso}:${process.pid}:${randomBytes(8).toString("hex")}`)
+		.digest("hex")
+		.slice(0, 6);
 	return `${iso}__${digest}`;
 }
 
@@ -23,18 +29,31 @@ export interface RunContext {
 /** Probe writability; never throws. Creates `.doctor/` when possible.
  *  When `skipRunDir` is set, probes but does not create the per-run directory
  *  (health path: no artifacts, detectors still see a healthy filesystem state). */
-export async function createRunContext(cwd: string, gitSha: string | null, opts: { skipRunDir?: boolean } = {}): Promise<RunContext> {
+export async function createRunContext(
+	cwd: string,
+	gitSha: string | null,
+	opts: { skipRunDir?: boolean } = {},
+): Promise<RunContext> {
 	const runId = newRunId(gitSha ?? "nogit");
 	const doctorDir = path.join(cwd, ".doctor");
 	const runDir = path.join(doctorDir, "runs", runId);
 	const startedAt = new Date().toISOString();
 	if (opts.skipRunDir) {
-		const writable = await isDirWritable(cwd) && (await isDirWritable(path.join(cwd, ".doctor"), { allowMissing: true }));
+		const writable =
+			(await isDirWritable(cwd)) &&
+			(await isDirWritable(path.join(cwd, ".doctor"), { allowMissing: true }));
 		const backupsDir = path.join(runDir, "backups");
 		return { runId, startedAt, doctorDir, runDir, backupsDir, artifactPersistence: writable };
 	}
 	if (!(await probeWritable(doctorDir))) {
-		return { runId, startedAt, doctorDir, runDir, backupsDir: path.join(runDir, "backups"), artifactPersistence: false };
+		return {
+			runId,
+			startedAt,
+			doctorDir,
+			runDir,
+			backupsDir: path.join(runDir, "backups"),
+			artifactPersistence: false,
+		};
 	}
 	const backupsDir = path.join(runDir, "backups");
 	return { runId, startedAt, doctorDir, runDir, backupsDir, artifactPersistence: true };
@@ -57,7 +76,8 @@ async function isDirWritable(dir: string, opts: { allowMissing?: boolean } = {})
 		await fs.access(dir, fsConstants.W_OK);
 		return true;
 	} catch (error) {
-		if (opts.allowMissing && (error as NodeJS.ErrnoException).code === "ENOENT") return isDirWritable(path.dirname(dir));
+		if (opts.allowMissing && (error as NodeJS.ErrnoException).code === "ENOENT")
+			return isDirWritable(path.dirname(dir));
 		return false;
 	}
 }

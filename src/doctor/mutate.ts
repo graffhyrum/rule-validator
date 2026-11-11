@@ -35,7 +35,11 @@ export async function mutate(run: RunContext, req: MutateRequest): Promise<Docto
 		timestamp: new Date().toISOString(),
 		existed,
 	};
-	await appendAction(run, { ...action, run_id: run.runId, backup: existed ? path.join("backups", backupRel) : null });
+	await appendAction(run, {
+		...action,
+		run_id: run.runId,
+		backup: existed ? path.join("backups", backupRel) : null,
+	});
 	return action;
 }
 
@@ -53,7 +57,11 @@ function backupPathFor(scopeRoot: string, target: string): string {
 	return safe.length > 0 ? safe : "__root__";
 }
 
-async function computeNextBytes(target: string, existed: boolean, req: MutateRequest): Promise<Buffer> {
+async function computeNextBytes(
+	target: string,
+	existed: boolean,
+	req: MutateRequest,
+): Promise<Buffer> {
 	const addition = Buffer.from(req.content);
 	if (req.op === "create") {
 		if (existed) throw new MutateError(`create target already exists: ${target}`, "already-exists");

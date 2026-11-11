@@ -33,13 +33,20 @@ async function isInsideReal(root: string, resolved: string): Promise<boolean> {
 /** Write `content` to `target` atomically (tmp in same dir + rename). */
 export async function writeAtomic(target: string, content: Buffer): Promise<void> {
 	const dir = path.dirname(target);
-	const tmp = path.join(dir, `.tmp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+	const tmp = path.join(
+		dir,
+		`.tmp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+	);
 	await fs.writeFile(tmp, content);
 	await fs.rename(tmp, target);
 }
 
 /** Verbatim copy preserving byte content. Returns the recorded backup path. */
-export async function backupVerbatim(source: string, backupDir: string, relName: string): Promise<string> {
+export async function backupVerbatim(
+	source: string,
+	backupDir: string,
+	relName: string,
+): Promise<string> {
 	const dest = path.join(backupDir, relName);
 	await fs.mkdir(path.dirname(dest), { recursive: true });
 	const bytes = await fs.readFile(source);

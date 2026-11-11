@@ -19,7 +19,8 @@ export function capabilitiesJson(): object {
 			{
 				failure_mode: "fm-io-gitignore-missing-doctor-dir",
 				op: "append `.doctor/` to <repo>/.gitignore (creates the file if absent)",
-				verify: "re-runs the detector after the fix; byte-identical backups in .doctor/runs/<run-id>/backups/",
+				verify:
+					"re-runs the detector after the fix; byte-identical backups in .doctor/runs/<run-id>/backups/",
 				undo: "rule-validator doctor undo <run-id>",
 			},
 		],
@@ -27,12 +28,18 @@ export function capabilitiesJson(): object {
 			["fm-io-doctor-dir-unwritable", "preflight; artifacts cannot persist; --fix refuses"],
 			["fm-runtime-not-bun", "runtime is not Bun"],
 			["fm-rules-engine-regex-missing-g-flag", "regex rule missing g flag"],
-			["fm-rules-engine-registry-integrity", "registry invariants (names, severities, messages, visitors)"],
+			[
+				"fm-rules-engine-registry-integrity",
+				"registry invariants (names, severities, messages, visitors)",
+			],
 			["fm-rules-engine-ast-smoke-fails", "AST engine silently dead or wrong"],
 			["fm-rules-engine-parse-diagnostics", "TS parseDiagnostics canary"],
 			["fm-configs-config-file-malformed-json", "config exists but JSON.parse fails"],
 			["fm-configs-config-schema-reject", "config rejected by arktype schema"],
-			["fm-configs-config-unknown-rule-name", "config rules keys match no known rule (inert exclusion)"],
+			[
+				"fm-configs-config-unknown-rule-name",
+				"config rules keys match no known rule (inert exclusion)",
+			],
 			["fm-configs-config-exclude-glob-no-match", "top-level exclude glob matches zero files"],
 			["fm-io-gitignore-missing-doctor-dir", "repo does not ignore .doctor/"],
 		].map(([id, description]) => ({ id, description })),

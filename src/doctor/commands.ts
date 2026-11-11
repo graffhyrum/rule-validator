@@ -1,12 +1,17 @@
 // Secondary doctor surfaces: health, capabilities, robot-docs, ls, undo.
 import path from "node:path";
-import { DOCTOR_CONTRACT_VERSION, DOCTOR_VERSION, DoctorExit } from "./types.ts";
+import { DOCTOR_CONTRACT_VERSION, DoctorExit } from "./types.ts";
 import { capabilitiesJson, ROBOT_DOCS } from "./capabilities.ts";
 import { latestRunDir, listRuns, undoRun } from "./undo.ts";
 import { runDoctorDiagnose } from "./doctor.ts";
 
 export async function runHealth(cwd: string = process.cwd()): Promise<number> {
-	const code = await runDoctorDiagnose({ cwd, quick: true, silent: true, skipArtifactWrites: true });
+	const code = await runDoctorDiagnose({
+		cwd,
+		quick: true,
+		silent: true,
+		skipArtifactWrites: true,
+	});
 	console.log(code === 0 ? "rule-validator doctor: ok" : "rule-validator doctor: findings");
 	return code;
 }
@@ -25,7 +30,10 @@ export function runRobotDocs(): number {
 	return DoctorExit.healthy;
 }
 
-export async function runLs(jsonFlag: boolean | undefined, cwd: string = process.cwd()): Promise<number> {
+export async function runLs(
+	jsonFlag: boolean | undefined,
+	cwd: string = process.cwd(),
+): Promise<number> {
 	const doctorDir = path.join(cwd, ".doctor");
 	const runs = await listRuns(doctorDir);
 	if (jsonFlag) {
@@ -42,13 +50,18 @@ export async function runLs(jsonFlag: boolean | undefined, cwd: string = process
 	return DoctorExit.healthy;
 }
 
-export async function runDoctorUndo(runId: string | undefined, cwd: string = process.cwd()): Promise<number> {
+export async function runDoctorUndo(
+	runId: string | undefined,
+	cwd: string = process.cwd(),
+): Promise<number> {
 	const doctorDir = path.join(cwd, ".doctor");
 	const resolved = await resolveRunDir(doctorDir, runId);
 	if (!resolved) {
-		console.error(runId === "latest" || runId === undefined
-			? "no doctor runs found in .doctor/runs/"
-			: `no run with id "${runId}" in .doctor/runs/`);
+		console.error(
+			runId === "latest" || runId === undefined
+				? "no doctor runs found in .doctor/runs/"
+				: `no run with id "${runId}" in .doctor/runs/`,
+		);
 		return DoctorExit.noInput;
 	}
 	const result = await undoRun(resolved, doctorDir);

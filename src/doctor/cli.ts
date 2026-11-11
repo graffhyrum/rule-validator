@@ -8,7 +8,9 @@ import { DoctorExit } from "./types.ts";
 
 export function buildDoctorProgram(): Command {
 	const doctor = new Command("doctor");
-	doctor.description("Diagnose rule-validator itself (read-only); --fix applies reversible repairs");
+	doctor.description(
+		"Diagnose rule-validator itself (read-only); --fix applies reversible repairs",
+	);
 	doctor.option("--fix", "apply auto-fixable findings (verbatim backups first)");
 	doctor.option("--dry-run", "print the repair plan; write nothing");
 	doctor.option("--json", "emit the full report as JSON");
@@ -19,32 +21,40 @@ export function buildDoctorProgram(): Command {
 	doctor.option("--robot-triage", "one-call agent triage: summary, findings, recommended_command");
 	doctor.option("--online", "reserved for future network probes; doctor runs fully offline");
 	doctor.action(async (opts: Record<string, unknown>) => {
-		if (opts.online) console.error("--online: no network probes run this pass; flag accepted for contract stability");
+		if (opts.online)
+			console.error(
+				"--online: no network probes run this pass; flag accepted for contract stability",
+			);
 		process.exit(await runDoctorDiagnose(opts));
 	});
-	doctor.command("health")
+	doctor
+		.command("health")
 		.description("one-line liveness check for CI; exit 0/1")
 		.action(async () => {
 			process.exit(await runHealth());
 		});
-	doctor.command("capabilities")
+	doctor
+		.command("capabilities")
 		.description("print the doctor contract (detectors, fixers, exit codes, paths written)")
 		.option("--json", "compact single-line JSON")
 		.action((o: { json?: boolean }) => {
 			process.exit(runCapabilities(o.json));
 		});
-	doctor.command("robot-docs")
+	doctor
+		.command("robot-docs")
 		.description("print a paste-ready agent handbook for this doctor")
 		.action(() => {
 			process.exit(runRobotDocs());
 		});
-	doctor.command("ls")
+	doctor
+		.command("ls")
 		.description("list past doctor runs in .doctor/runs/")
 		.option("--json", "machine-readable output")
 		.action(async (o: { json?: boolean }) => {
 			process.exit(await runLs(o.json));
 		});
-	doctor.command("undo [run-id]")
+	doctor
+		.command("undo [run-id]")
 		.description("restore a previous run's mutations from backups (default: latest)")
 		.action(async (runId: string | undefined) => {
 			process.exit(await runDoctorUndo(runId));

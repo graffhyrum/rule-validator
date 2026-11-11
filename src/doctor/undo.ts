@@ -27,7 +27,11 @@ interface UndoTarget {
 	result: UndoResult;
 }
 
-export async function undoRun(runDir: string, doctorDir: string, actionsPath?: string): Promise<UndoResult> {
+export async function undoRun(
+	runDir: string,
+	doctorDir: string,
+	actionsPath?: string,
+): Promise<UndoResult> {
 	const actionsFile = actionsPath ?? path.join(runDir, "actions.jsonl");
 	const lines = await readActions(actionsFile);
 	const result: UndoResult = { restored: 0, skipped: [], errors: [] };
@@ -54,7 +58,13 @@ async function readActions(actionsFile: string): Promise<ActionLine[]> {
 			actions.push(JSON.parse(line) as ActionLine);
 		} catch {
 			// Corrupt line: skip loudly — caller reports it via skipped.
-			actions.push({ path: actionsFile, op: "unreadable", beforeHash: null, afterHash: "", existed: false });
+			actions.push({
+				path: actionsFile,
+				op: "unreadable",
+				beforeHash: null,
+				afterHash: "",
+				existed: false,
+			});
 		}
 	}
 	return actions;
@@ -70,17 +80,28 @@ async function undoOne(target: UndoTarget): Promise<void> {
 		await quarantineCreated(target.doctorDir, action, target.result);
 		return;
 	}
-	await restoreFromBackup({ runDir: target.runDir, doctorDir: target.doctorDir, action: target.action, result: target.result });
+	await restoreFromBackup({
+		runDir: target.runDir,
+		doctorDir: target.doctorDir,
+		action: target.action,
+		result: target.result,
+	});
 }
 
-async function quarantineCreated(doctorDir: string, action: ActionLine, result: UndoResult): Promise<void> {
+async function quarantineCreated(
+	doctorDir: string,
+	action: ActionLine,
+	result: UndoResult,
+): Promise<void> {
 	const current = await fs.readFile(action.path).catch(() => null);
 	if (!current) {
 		result.skipped.push(`${action.path}: already gone, nothing to undo`);
 		return;
 	}
 	if (sha256(current) !== action.afterHash) {
-		result.errors.push(`${action.path}: content changed since the fix — refusing to remove (hash mismatch)`);
+		result.errors.push(
+			`${action.path}: content changed since the fix — refusing to remove (hash mismatch)`,
+		);
 		return;
 	}
 	const quarantine = path.join(doctorDir, "quarantine", path.basename(action.path));
@@ -97,17 +118,23 @@ async function restoreFromBackup(target: {
 }): Promise<void> {
 	const { runDir, action, result } = target;
 	if (!action.backup) {
-		result.errors.push(`${action.path}: actions.jsonl records no backup path — refusing to restore`);
+		result.errors.push(
+			`${action.path}: actions.jsonl records no backup path — refusing to restore`,
+		);
 		return;
 	}
 	const backupPath = path.join(runDir, action.backup);
 	const backup = await fs.readFile(backupPath).catch(() => null);
 	if (!backup) {
-		result.errors.push(`${action.path}: backup missing at ${backupPath} — refusing to touch the file`);
+		result.errors.push(
+			`${action.path}: backup missing at ${backupPath} — refusing to touch the file`,
+		);
 		return;
 	}
 	if (action.beforeHash && sha256(backup) !== action.beforeHash) {
-		result.errors.push(`${action.path}: backup hash mismatch (corrupt backup) — refusing to restore`);
+		result.errors.push(
+			`${action.path}: backup hash mismatch (corrupt backup) — refusing to restore`,
+		);
 		return;
 	}
 	await writeAtomic(action.path, backup);
@@ -115,16 +142,34 @@ async function restoreFromBackup(target: {
 }
 
 /** Best-effort sweep of empty legacy quarantine dirs created before pass 1 — never deletes content. */
-export async function listRuns(doctorDir: string): Promise<{ run_id: string; started_at: string | null; exit_code: number | null; action_count: number }[]> {
+export async function listRuns(
+	doctorDir: string,
+): Promise<
+	{ run_id: string; started_at: string | null; exit_code: number | null; action_count: number }[]
+> {
 	const runsDir = path.join(doctorDir, "runs");
 	const entries = await fs.readdir(runsDir, { withFileTypes: true }).catch(() => []);
-	const out: { run_id: string; started_at: string | null; exit_code: number | null; action_count: number }[] = [];
+	const out: {
+		run_id: string;
+		started_at: string | null;
+		exit_code: number | null;
+		action_count: number;
+	}[] = [];
 	for (const entry of entries) {
 		if (!entry.isDirectory()) continue;
 		const reportPath = path.join(runsDir, entry.name, "report.json");
 		try {
-			const report = JSON.parse(await fs.readFile(reportPath, "utf8")) as { started_at?: string; exit_code?: number; summary?: { actions_taken?: number } };
-			out.push({ run_id: entry.name, started_at: report.started_at ?? null, exit_code: report.exit_code ?? null, action_count: report.summary?.actions_taken ?? 0 });
+			const report = JSON.parse(await fs.readFile(reportPath, "utf8")) as {
+				started_at?: string;
+				exit_code?: number;
+				summary?: { actions_taken?: number };
+			};
+			out.push({
+				run_id: entry.name,
+				started_at: report.started_at ?? null,
+				exit_code: report.exit_code ?? null,
+				action_count: report.summary?.actions_taken ?? 0,
+			});
 		} catch {
 			out.push({ run_id: entry.name, started_at: null, exit_code: null, action_count: 0 });
 		}

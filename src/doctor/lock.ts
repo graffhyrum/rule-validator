@@ -38,7 +38,9 @@ async function tryCreateLock(lockPath: string): Promise<LockResult | null> {
 		await handle.close();
 		return { ok: true };
 	} catch (error) {
-		return (error as NodeJS.ErrnoException).code === "EEXIST" ? null : { ok: false, holder: `lock-error:${(error as Error).message}` };
+		return (error as NodeJS.ErrnoException).code === "EEXIST"
+			? null
+			: { ok: false, holder: `lock-error:${(error as Error).message}` };
 	}
 }
 

@@ -50,14 +50,22 @@ export async function runDoctorDiagnose(options: DoctorOptions): Promise<number>
 	if (options.explain !== undefined) return printExplanation(findings, options.explain, options);
 	const fixOutcome = await maybeApplyFixes({ run, ctx, options, findings });
 	const finalFindings = fixOutcome.redetect ? await runDetectors(ctx, options) : findings;
-	const report = buildReport({ run, findings: finalFindings, actions: fixOutcome.actions, failure: fixOutcome.failure, repoRoot });
+	const report = buildReport({
+		run,
+		findings: finalFindings,
+		actions: fixOutcome.actions,
+		failure: fixOutcome.failure,
+		repoRoot,
+	});
 	report.exit_code = computeExitCode(report, options, fixOutcome);
 	if (!options.skipArtifactWrites) await writeReport(run, report);
 	reportAndExit(report, options, fixOutcome);
 	return report.exit_code;
 }
 
-async function discoverGit(cwd: string): Promise<{ gitSha: string | null; repoRoot: string | null }> {
+async function discoverGit(
+	cwd: string,
+): Promise<{ gitSha: string | null; repoRoot: string | null }> {
 	const gitSha = await gitOutput(["rev-parse", "HEAD"], cwd);
 	const root = await gitOutput(["rev-parse", "--show-toplevel"], cwd);
 	return { gitSha, repoRoot: root ? path.resolve(root) : null };
@@ -96,7 +104,9 @@ async function loadConfigState(cwd: string): Promise<ConfigState> {
 }
 
 async function readAndValidateConfig(configPath: string): Promise<ConfigState> {
-	const raw = await Bun.file(configPath).text().catch(() => null);
+	const raw = await Bun.file(configPath)
+		.text()
+		.catch(() => null);
 	if (raw === null) return { kind: "malformed", configPath, error: "file unreadable" };
 	const parsed = parseJsonSafe(raw);
 	if (!parsed.ok) return { kind: "malformed", configPath, error: parsed.error };
@@ -113,14 +123,23 @@ function parseJsonSafe(raw: string): { ok: true; value: unknown } | { ok: false;
 	}
 }
 
-async function runDetectors(ctx: DetectorContext, options: DoctorOptions): Promise<DoctorFinding[]> {
+async function runDetectors(
+	ctx: DetectorContext,
+	options: DoctorOptions,
+): Promise<DoctorFinding[]> {
 	const only = parseOnly(options.only);
 	const selected = DETECTORS.filter((d) => detectorApplies(d, options, only));
-	const nested = await Promise.all(selected.map((d) => d.detect(ctx).catch((error) => detectorCrash(d, error))));
+	const nested = await Promise.all(
+		selected.map((d) => d.detect(ctx).catch((error) => detectorCrash(d, error))),
+	);
 	return nested.flat();
 }
 
-function detectorApplies(d: DetectorDescriptor, options: DoctorOptions, only: Set<string> | null): boolean {
+function detectorApplies(
+	d: DetectorDescriptor,
+	options: DoctorOptions,
+	only: Set<string> | null,
+): boolean {
 	if (only && !only.has(d.id)) return false;
 	if (options.quick && !d.quick) return false;
 	return true;
@@ -128,18 +147,23 @@ function detectorApplies(d: DetectorDescriptor, options: DoctorOptions, only: Se
 
 function parseOnly(only: string | undefined): Set<string> | null {
 	if (!only) return null;
-	const ids = only.split(",").map((s) => s.trim()).filter(Boolean);
+	const ids = only
+		.split(",")
+		.map((s) => s.trim())
+		.filter(Boolean);
 	return ids.length > 0 ? new Set(ids) : null;
 }
 
 function detectorCrash(d: DetectorDescriptor, error: unknown): DoctorFinding[] {
-	return [{
-		id: d.id,
-		severity: "error",
-		title: `Detector ${d.id} crashed — treated as a finding, not a silent pass`,
-		evidence: { error: error instanceof Error ? error.message : String(error) },
-		remediation: { autoFixable: false, hint: "Report this with the detector id above." },
-	}];
+	return [
+		{
+			id: d.id,
+			severity: "error",
+			title: `Detector ${d.id} crashed — treated as a finding, not a silent pass`,
+			evidence: { error: error instanceof Error ? error.message : String(error) },
+			remediation: { autoFixable: false, hint: "Report this with the detector id above." },
+		},
+	];
 }
 
 interface FixOutcome {
@@ -152,15 +176,23 @@ interface FixOutcome {
 	redetect: boolean;
 }
 
-async function maybeApplyFixes(
-	parts: { run: RunContext; ctx: DetectorContext; options: DoctorOptions; findings: DoctorFinding[] },
-): Promise<FixOutcome> {
+async function maybeApplyFixes(parts: {
+	run: RunContext;
+	ctx: DetectorContext;
+	options: DoctorOptions;
+	findings: DoctorFinding[];
+}): Promise<FixOutcome> {
 	const { run, ctx, options, findings } = parts;
 	const fixable = findings.filter((f) => f.remediation.autoFixable);
-	const outcome: FixOutcome = { actions: [], actionsPlanned: fixable.map((f) => f.id), redetect: false };
+	const outcome: FixOutcome = {
+		actions: [],
+		actionsPlanned: fixable.map((f) => f.id),
+		redetect: false,
+	};
 	if (!options.fix || fixable.length === 0) return outcome;
 	if (!run.artifactPersistence) {
-		outcome.failure = "refusing to fix: .doctor/ artifacts cannot be persisted (no backup record possible)";
+		outcome.failure =
+			"refusing to fix: .doctor/ artifacts cannot be persisted (no backup record possible)";
 		return outcome;
 	}
 	if (options.dryRun) {
@@ -170,9 +202,12 @@ async function maybeApplyFixes(
 	return applyFixes({ run, ctx, fixable, outcome });
 }
 
-async function applyFixes(
-	parts: { run: RunContext; ctx: DetectorContext; fixable: DoctorFinding[]; outcome: FixOutcome },
-): Promise<FixOutcome> {
+async function applyFixes(parts: {
+	run: RunContext;
+	ctx: DetectorContext;
+	fixable: DoctorFinding[];
+	outcome: FixOutcome;
+}): Promise<FixOutcome> {
 	const { run, ctx, fixable, outcome } = parts;
 	if (!ctx.repoRoot) {
 		outcome.failure = "refusing to fix: cwd is not inside a git repository";
@@ -188,7 +223,8 @@ async function applyFixes(
 	}
 	try {
 		for (const finding of fixable) {
-			if (finding.id === "fm-io-gitignore-missing-doctor-dir") await applyGitignoreFix(run, ctx.repoRoot, outcome);
+			if (finding.id === "fm-io-gitignore-missing-doctor-dir")
+				await applyGitignoreFix(run, ctx.repoRoot, outcome);
 		}
 		outcome.redetect = outcome.actions.length > 0;
 		return outcome;
@@ -197,26 +233,29 @@ async function applyFixes(
 	}
 }
 
-async function applyGitignoreFix(run: RunContext, repoRoot: string, outcome: FixOutcome): Promise<void> {
+async function applyGitignoreFix(
+	run: RunContext,
+	repoRoot: string,
+	outcome: FixOutcome,
+): Promise<void> {
 	try {
 		const fix = await fixGitignoreDoctorDir(run, repoRoot);
 		outcome.actions.push(...fix.actions);
 	} catch (error) {
-		outcome.failure = error instanceof MutateError
-			? `refused: ${error.message}`
-			: `fix failed: ${error instanceof Error ? error.message : String(error)}`;
+		outcome.failure =
+			error instanceof MutateError
+				? `refused: ${error.message}`
+				: `fix failed: ${error instanceof Error ? error.message : String(error)}`;
 	}
 }
 
-function buildReport(
-	parts: {
-		run: RunContext;
-		findings: DoctorFinding[];
-		actions: DoctorAction[];
-		failure: string | undefined;
-		repoRoot: string | null;
-	},
-): DoctorReport {
+function buildReport(parts: {
+	run: RunContext;
+	findings: DoctorFinding[];
+	actions: DoctorAction[];
+	failure: string | undefined;
+	repoRoot: string | null;
+}): DoctorReport {
 	const { run, findings, actions, failure, repoRoot } = parts;
 	const summary = summarize(findings, actions);
 	return {
@@ -238,7 +277,12 @@ function buildReport(
 
 function summarize(findings: DoctorFinding[], actions: DoctorAction[]) {
 	const count = (sev: string) => findings.filter((f) => f.severity === sev).length;
-	return { errors: count("error"), warnings: count("warning"), infos: count("info"), actions_taken: actions.length };
+	return {
+		errors: count("error"),
+		warnings: count("warning"),
+		infos: count("info"),
+		actions_taken: actions.length,
+	};
 }
 
 function reportAndExit(report: DoctorReport, options: DoctorOptions, fixOutcome: FixOutcome): void {
@@ -248,10 +292,15 @@ function reportAndExit(report: DoctorReport, options: DoctorOptions, fixOutcome:
 	else printHuman(report, options, fixOutcome);
 }
 
-function computeExitCode(report: DoctorReport, options: DoctorOptions, fixOutcome: FixOutcome): number {
+function computeExitCode(
+	report: DoctorReport,
+	options: DoctorOptions,
+	fixOutcome: FixOutcome,
+): number {
 	if (options.fix && options.dryRun) return findingsExitCode(report.findings);
 	if (options.fix && fixOutcome.lockLost) return DoctorExit.concurrencyLost;
-	if (options.fix && fixOutcome.failure) return fixOutcome.actions.length > 0 ? DoctorExit.partial : DoctorExit.refused;
+	if (options.fix && fixOutcome.failure)
+		return fixOutcome.actions.length > 0 ? DoctorExit.partial : DoctorExit.refused;
 	return findingsExitCode(report.findings);
 }
 
@@ -260,18 +309,21 @@ function findingsExitCode(findings: DoctorFinding[]): number {
 }
 
 function printTriage(report: DoctorReport, fixOutcome: FixOutcome): void {
-	console.log(JSON.stringify({
-		summary: report.summary,
-		exit_code: report.exit_code,
-		findings: report.findings,
-		actions_planned: fixOutcome.actionsPlanned,
-		recommended_command: recommendedCommand(report),
-		capabilities_url: "rule-validator doctor capabilities --json",
-	}));
+	console.log(
+		JSON.stringify({
+			summary: report.summary,
+			exit_code: report.exit_code,
+			findings: report.findings,
+			actions_planned: fixOutcome.actionsPlanned,
+			recommended_command: recommendedCommand(report),
+			capabilities_url: "rule-validator doctor capabilities --json",
+		}),
+	);
 }
 
 function recommendedCommand(report: DoctorReport): string {
-	if (report.summary.actions_taken > 0) return "rule-validator doctor undo latest   # restore if the change is unwanted";
+	if (report.summary.actions_taken > 0)
+		return "rule-validator doctor undo latest   # restore if the change is unwanted";
 	if (report.findings.some((f) => f.remediation.autoFixable)) return "rule-validator doctor --fix";
 	return "rule-validator doctor --explain <finding-id>";
 }
@@ -285,7 +337,11 @@ function printHuman(report: DoctorReport, options: DoctorOptions, fixOutcome: Fi
 	}
 	if (fixOutcome.failure) console.log(pc.red(`fix: ${fixOutcome.failure}`));
 	if (report.summary.actions_taken > 0) {
-		console.log(pc.green(`applied ${report.summary.actions_taken} action(s) — artifacts at .doctor/runs/${report.run_id}/`));
+		console.log(
+			pc.green(
+				`applied ${report.summary.actions_taken} action(s) — artifacts at .doctor/runs/${report.run_id}/`,
+			),
+		);
 	}
 }
 
@@ -298,7 +354,8 @@ function severityColor(severity: DoctorFinding["severity"]): (text: string) => s
 function printFinding(f: DoctorFinding): void {
 	const color = severityColor(f.severity);
 	console.log(`${color(`[${f.severity}]`)} ${f.id} — ${f.title}`);
-	for (const [key, value] of Object.entries(f.evidence)) console.log(`    ${pc.dim(`${key}:`)} ${value}`);
+	for (const [key, value] of Object.entries(f.evidence))
+		console.log(`    ${pc.dim(`${key}:`)} ${value}`);
 	console.log(pc.dim(`    → ${f.remediation.hint ?? f.remediation.command ?? "run --explain"}`));
 }
 
