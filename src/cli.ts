@@ -3,6 +3,7 @@ import { createCommand } from "commander";
 import packageJson from "../package.json";
 import { runAstRules } from "./ast-scan.ts";
 import { loadProjectConfig } from "./config.ts";
+import { runDoctorCli } from "./doctor/cli.ts";
 import {
 	type DisplayViolation,
 	exitWithResult,
@@ -24,8 +25,13 @@ type CombinedScanResult = {
 };
 
 export async function main(argv?: string[]): Promise<void> {
+	const effectiveArgv = argv ?? process.argv;
+	if (effectiveArgv[2] === "doctor") {
+		await runDoctorCli(effectiveArgv.slice(3));
+		return;
+	}
 	const program = buildProgram();
-	program.parse(argv ?? process.argv);
+	program.parse(effectiveArgv);
 	const opts = program.opts<{ json?: boolean }>();
 	const pattern: string = program.args[0] || DEFAULT_PATTERN;
 

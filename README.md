@@ -73,18 +73,18 @@ when errors are found or the scan crashes.
 
 ## Available rules
 
-| Rule | Severity | What it catches |
-| --- | --- | --- |
-| `no-waitForTimeout` | error | Playwright `waitForTimeout()` — use auto-waiting |
-| `no-non-null-assertion` | error | The `!` non-null assertion operator |
-| `no-unknown-as-cast` | error | `as unknown as T` double casts |
-| `no-expect-typeof-tobe` | error | `expect(typeof x).toBe(...)` runtime type checks |
-| `no-toBeInstanceOf` | error | `toBeInstanceOf()` constructor checks |
-| `no-static-classes` | error | Classes with only static members |
-| `template-literals-only` | error | String concatenation instead of template literals |
-| `prefer-bun-file-io` | warning | `node:fs` file I/O where `Bun.file`/`Bun.write` fits |
-| `no-raw-response-in-elysia` | warning | `new Response()` in Elysia handlers |
-| `no-raw-locator-in-spec` | error | Raw `page.locator()` in spec files |
+| Rule                        | Severity | What it catches                                      |
+| --------------------------- | -------- | ---------------------------------------------------- |
+| `no-waitForTimeout`         | error    | Playwright `waitForTimeout()` — use auto-waiting     |
+| `no-non-null-assertion`     | error    | The `!` non-null assertion operator                  |
+| `no-unknown-as-cast`        | error    | `as unknown as T` double casts                       |
+| `no-expect-typeof-tobe`     | error    | `expect(typeof x).toBe(...)` runtime type checks     |
+| `no-toBeInstanceOf`         | error    | `toBeInstanceOf()` constructor checks                |
+| `no-static-classes`         | error    | Classes with only static members                     |
+| `template-literals-only`    | error    | String concatenation instead of template literals    |
+| `prefer-bun-file-io`        | warning  | `node:fs` file I/O where `Bun.file`/`Bun.write` fits |
+| `no-raw-response-in-elysia` | warning  | `new Response()` in Elysia handlers                  |
+| `no-raw-locator-in-spec`    | error    | Raw `page.locator()` in spec files                   |
 
 ## Configuration
 
@@ -93,11 +93,11 @@ walks up from the current working directory to find it.
 
 ```json
 {
-  "exclude": ["legacy/**", "src/generated/**"],
-  "rules": {
-    "no-non-null-assertion": { "exclude": ["src/generated/**"] },
-    "no-static-classes": { "exclude": ["src/infrastructure/**"] }
-  }
+	"exclude": ["legacy/**", "src/generated/**"],
+	"rules": {
+		"no-non-null-assertion": { "exclude": ["src/generated/**"] },
+		"no-static-classes": { "exclude": ["src/infrastructure/**"] }
+	}
 }
 ```
 
