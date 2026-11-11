@@ -31,6 +31,21 @@ const ProjectConfigSchema = type({
 export type ProjectConfig = typeof ProjectConfigSchema.infer;
 export type RuleExcludes = NonNullable<ProjectConfig["rules"]>;
 
+export type ProjectConfigValidation =
+	| { ok: true; config: ProjectConfig }
+	| { ok: false; summary: string };
+
+/** Read-side validation for tooling (doctor). Same schema as the loader; never throws. */
+export function validateProjectConfig(parsed: unknown): ProjectConfigValidation {
+	const result = ProjectConfigSchema(parsed);
+	if (result instanceof type.errors) return { ok: false, summary: result.summary };
+	return { ok: true, config: result };
+}
+
+export async function findProjectConfigPath(startDir?: string): Promise<string | null> {
+	return findConfigFile(startDir ?? process.cwd());
+}
+
 export async function loadProjectConfig(startDir?: string): Promise<ProjectConfig> {
 	const dir = startDir ?? process.cwd();
 	const configPath = await findConfigFile(dir);
